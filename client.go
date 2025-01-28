@@ -28,6 +28,7 @@ type Client struct {
 	Identity       *IdentityService
 	Search         *SearchService
 	Reconciliation *ReconciliationService
+	Metadata       *MetadataService
 }
 
 // create a client interface
@@ -94,6 +95,7 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 	client.Identity = &IdentityService{client: client}
 	client.Search = &SearchService{client: client}
 	client.Reconciliation = &ReconciliationService{client: client}
+	client.Metadata = &MetadataService{client: client}
 
 	return client
 }
