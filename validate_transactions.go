@@ -2,6 +2,7 @@ package blnkgo
 
 import (
 	"errors"
+	"math/big"
 	"strings"
 )
 
@@ -33,14 +34,14 @@ func ValidateCreateTransacation(t CreateTransactionRequest) error {
 		return errors.New(sb.String())
 	}
 
-	if len(t.Sources) > 0 {
+	if len(t.Sources) > 0 && t.PreciseAmount.Cmp(big.NewInt(0)) == 0 {
 		err := validateSources(t.Sources, t.Amount, &sb)
 		if err != nil {
 			return err
 		}
 	}
 
-	if len(t.Destinations) > 0 {
+	if len(t.Destinations) > 0 && t.PreciseAmount.Cmp(big.NewInt(0)) == 0 {
 		err := validateSources(t.Destinations, t.Amount, &sb)
 		if err != nil {
 			return err

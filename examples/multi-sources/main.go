@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/big"
 	"net/url"
 	"time"
 
@@ -16,12 +17,12 @@ func main() {
 
 	_, _, err := client.Transaction.Create(blnkgo.CreateTransactionRequest{
 		ParentTransaction: blnkgo.ParentTransaction{
-			Amount:      1000,
-			Reference:   "ref-21d",
-			Precision:   100,
-			Currency:    "USD",
-			Description: "Alice Funds",
-			Destination: "@alice",
+			PreciseAmount: big.NewInt(10000),
+			Reference:     "ref-21d",
+			Precision:     100,
+			Currency:      "USD",
+			Description:   "Alice Funds",
+			Destination:   "@alice",
 			Sources: []blnkgo.Source{
 				{
 					Identifier:   "@test-1",

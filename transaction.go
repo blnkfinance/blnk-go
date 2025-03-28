@@ -2,6 +2,7 @@ package blnkgo
 
 import (
 	"fmt"
+	"math/big"
 	"net/http"
 	"time"
 )
@@ -27,7 +28,7 @@ type ParentTransaction struct {
 	Rate          float64                `json:"rate,omitempty"`
 	Source        string                 `json:"source,omitempty"`
 	Destination   string                 `json:"destination,omitempty"`
-	PreciseAmount int64                  `json:"precise_amount,omitempty"`
+	PreciseAmount *big.Int               `json:"precise_amount,omitempty"`
 	SkipQueue     bool                   `json:"skip_queue"`
 	Status        PryTransactionStatus   `json:"status"`
 	MetaData      map[string]interface{} `json:"meta_data,omitempty"`
