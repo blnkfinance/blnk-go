@@ -81,15 +81,45 @@ type SearchHit struct {
 }
 
 type SearchDocument struct {
-	BalanceID     string       `json:"balance_id"`
-	Balance       float64      `json:"balance"`
-	CreditBalance float64      `json:"credit_balance"`
-	DebitBalance  float64      `json:"debit_balance"`
-	Currency      string       `json:"currency"`
-	Precision     int          `json:"precision"`
-	LedgerID      string       `json:"ledger_id"`
-	CreatedAt     FlexibleTime `json:"created_at"` // Accepts both Unix timestamp and RFC3339 string
-	MetaData      interface{}  `json:"meta_data"`  // Can be string, map, or other types
+	// Common fields
+	ID        string       `json:"id,omitempty"`
+	CreatedAt FlexibleTime `json:"created_at"` // Accepts both Unix timestamp and RFC3339 string
+	MetaData  interface{}  `json:"meta_data"`  // Can be string, map, or other types
+
+	// Balance fields
+	BalanceID     string  `json:"balance_id,omitempty"`
+	Balance       float64 `json:"balance,omitempty"`
+	CreditBalance float64 `json:"credit_balance,omitempty"`
+	DebitBalance  float64 `json:"debit_balance,omitempty"`
+	Currency      string  `json:"currency,omitempty"`
+	Precision     int     `json:"precision,omitempty"`
+	LedgerID      string  `json:"ledger_id,omitempty"`
+
+	// Transaction fields
+	TransactionID      string       `json:"transaction_id,omitempty"`
+	Amount             float64      `json:"amount,omitempty"`
+	AmountString       string       `json:"amount_string,omitempty"`
+	Source             string       `json:"source,omitempty"`
+	Destination        string       `json:"destination,omitempty"`
+	Sources            interface{}  `json:"sources,omitempty"`
+	Destinations       interface{}  `json:"destinations,omitempty"`
+	Reference          string       `json:"reference,omitempty"`
+	Description        string       `json:"description,omitempty"`
+	Status             string       `json:"status,omitempty"`
+	ParentTransaction  string       `json:"parent_transaction,omitempty"`
+	Hash               string       `json:"hash,omitempty"`
+	Atomic             bool         `json:"atomic,omitempty"`
+	Inflight           bool         `json:"inflight,omitempty"`
+	AllowOverdraft     bool         `json:"allow_overdraft,omitempty"`
+	OverdraftLimit     float64      `json:"overdraft_limit,omitempty"`
+	ScheduledFor       FlexibleTime `json:"scheduled_for,omitempty"`
+	InflightExpiryDate FlexibleTime `json:"inflight_expiry_date,omitempty"`
+	SkipQueue          bool         `json:"skip_queue,omitempty"`
+	Rate               float64      `json:"rate,omitempty"`
+	PreciseAmount      float64      `json:"precise_amount,omitempty"`
+
+	// Ledger fields
+	Name string `json:"name,omitempty"`
 }
 
 func (s *SearchService) SearchDocument(body SearchParams, resource ResourceType) (*SearchResponse, *http.Response, error) {

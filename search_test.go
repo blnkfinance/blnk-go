@@ -319,3 +319,106 @@ func TestSearchDocument_MetaData_FlexibleTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestSearchDocument_TransactionFields(t *testing.T) {
+	// JSON response similar to what's returned by the API for transactions
+	transactionJSON := `{
+		"allow_overdraft": true,
+		"amount": 566,
+		"amount_string": "566",
+		"atomic": false,
+		"created_at": 1754599843,
+		"currency": "POINTS",
+		"description": "Pontos transferidos do posto para o motorista",
+		"destination": "bln_113a75b0-e838-48b6-934b-18b142295bb3",
+		"destinations": [],
+		"hash": "a872fd9adfe0173810b4d171360b98edc663bd9104a2db4dc53022e2deb348d2",
+		"id": "26",
+		"inflight": false,
+		"inflight_expiry_date": 1754599843,
+		"meta_data": "{\"QUEUED_PARENT_TRANSACTION\":\"txn_b1a740cc-5b8a-4370-b7f1-d4e4554a3029\",\"transaction_type\":\"posto -> motorista\"}",
+		"overdraft_limit": 0,
+		"parent_transaction": "txn_b1a740cc-5b8a-4370-b7f1-d4e4554a3029",
+		"precise_amount": 566,
+		"precision": 1,
+		"rate": 1,
+		"reference": "motor-test-34c9737f-1bc8-4495-a33d-0d8207be46c3_q",
+		"scheduled_for": 1754599843,
+		"skip_queue": false,
+		"source": "bln_f7e6fbc5-ddac-4b79-adf0-151cc7f9605e",
+		"sources": [],
+		"status": "APPLIED",
+		"transaction_id": "txn_2dd81e34-c72b-4467-8dbe-e3f126a73e92"
+	}`
+
+	var doc blnkgo.SearchDocument
+	err := json.Unmarshal([]byte(transactionJSON), &doc)
+
+	assert.NoError(t, err)
+
+	// Test transaction-specific fields
+	assert.Equal(t, "txn_2dd81e34-c72b-4467-8dbe-e3f126a73e92", doc.TransactionID)
+	assert.Equal(t, 566.0, doc.Amount)
+	assert.Equal(t, "566", doc.AmountString)
+	assert.Equal(t, "bln_f7e6fbc5-ddac-4b79-adf0-151cc7f9605e", doc.Source)
+	assert.Equal(t, "bln_113a75b0-e838-48b6-934b-18b142295bb3", doc.Destination)
+	assert.Equal(t, "APPLIED", doc.Status)
+	assert.Equal(t, "txn_b1a740cc-5b8a-4370-b7f1-d4e4554a3029", doc.ParentTransaction)
+	assert.Equal(t, "a872fd9adfe0173810b4d171360b98edc663bd9104a2db4dc53022e2deb348d2", doc.Hash)
+	assert.Equal(t, false, doc.Atomic)
+	assert.Equal(t, false, doc.Inflight)
+	assert.Equal(t, true, doc.AllowOverdraft)
+	assert.Equal(t, 0.0, doc.OverdraftLimit)
+	assert.Equal(t, 566.0, doc.PreciseAmount)
+	assert.Equal(t, 1, doc.Precision)
+	assert.Equal(t, 1.0, doc.Rate)
+	assert.Equal(t, "motor-test-34c9737f-1bc8-4495-a33d-0d8207be46c3_q", doc.Reference)
+	assert.Equal(t, false, doc.SkipQueue)
+	assert.Equal(t, "26", doc.ID)
+	assert.Equal(t, "POINTS", doc.Currency)
+	assert.Equal(t, "Pontos transferidos do posto para o motorista", doc.Description)
+
+	// Test common fields
+	assert.NotNil(t, doc.MetaData)
+	assert.NotZero(t, doc.CreatedAt.Time)
+
+	// Test that time fields were parsed correctly
+	expectedTime := time.Unix(1754599843, 0)
+	assert.Equal(t, expectedTime, doc.CreatedAt.Time)
+	assert.Equal(t, expectedTime, doc.ScheduledFor.Time)
+	assert.Equal(t, expectedTime, doc.InflightExpiryDate.Time)
+}
+
+func TestSearchDocument_LedgerFields(t *testing.T) {
+	// JSON response similar to what's returned by the API for ledgers
+	ledgerJSON := `{
+		"created_at": 1754599640,
+		"id": "ldg_40688495-864f-4442-ac37-68dba582b755",
+		"ledger_id": "ldg_40688495-864f-4442-ac37-68dba582b755",
+		"meta_data": "{\"description\":\"motorista pontos\"}",
+		"name": "Motorista (destino)"
+	}`
+
+	var doc blnkgo.SearchDocument
+	err := json.Unmarshal([]byte(ledgerJSON), &doc)
+
+	assert.NoError(t, err)
+
+	// Test ledger-specific fields
+	assert.Equal(t, "ldg_40688495-864f-4442-ac37-68dba582b755", doc.ID)
+	assert.Equal(t, "ldg_40688495-864f-4442-ac37-68dba582b755", doc.LedgerID)
+	assert.Equal(t, "Motorista (destino)", doc.Name)
+
+	// Test common fields
+	assert.NotNil(t, doc.MetaData)
+	assert.NotZero(t, doc.CreatedAt.Time)
+
+	// Test that time field was parsed correctly
+	expectedTime := time.Unix(1754599640, 0)
+	assert.Equal(t, expectedTime, doc.CreatedAt.Time)
+
+	// Test that metadata is correctly parsed as string
+	if metaStr, ok := doc.MetaData.(string); ok {
+		assert.Contains(t, metaStr, "motorista pontos")
+	}
+}
