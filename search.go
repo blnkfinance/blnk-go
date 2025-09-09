@@ -87,13 +87,13 @@ type SearchDocument struct {
 	MetaData  interface{}  `json:"meta_data"`  // Can be string, map, or other types
 
 	// Balance fields
-	BalanceID     string  `json:"balance_id,omitempty"`
-	Balance       float64 `json:"balance,omitempty"`
-	CreditBalance float64 `json:"credit_balance,omitempty"`
-	DebitBalance  float64 `json:"debit_balance,omitempty"`
-	Currency      string  `json:"currency,omitempty"`
-	Precision     int     `json:"precision,omitempty"`
-	LedgerID      string  `json:"ledger_id,omitempty"`
+	BalanceID     string `json:"balance_id,omitempty"`
+	Balance       string `json:"balance,omitempty"`
+	CreditBalance string `json:"credit_balance,omitempty"`
+	DebitBalance  string `json:"debit_balance,omitempty"`
+	Currency      string `json:"currency,omitempty"`
+	Precision     int    `json:"precision,omitempty"`
+	LedgerID      string `json:"ledger_id,omitempty"`
 
 	// Transaction fields
 	TransactionID      string       `json:"transaction_id,omitempty"`
@@ -116,7 +116,7 @@ type SearchDocument struct {
 	InflightExpiryDate FlexibleTime `json:"inflight_expiry_date,omitempty"`
 	SkipQueue          bool         `json:"skip_queue,omitempty"`
 	Rate               float64      `json:"rate,omitempty"`
-	PreciseAmount      float64      `json:"precise_amount,omitempty"`
+	PreciseAmount      string       `json:"precise_amount,omitempty"`
 	EffectiveDate      FlexibleTime `json:"effective_date,omitempty"`
 
 	// Ledger fields
