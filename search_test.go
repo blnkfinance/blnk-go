@@ -43,9 +43,9 @@ func TestSearchService_SearchDocument_Success(t *testing.T) {
 			{
 				Document: blnkgo.SearchDocument{
 					BalanceID:     "balance123",
-					Balance:       100.0,
-					CreditBalance: 50.0,
-					DebitBalance:  50.0,
+					Balance:       "100.0",
+					CreditBalance: "50.0",
+					DebitBalance:  "50.0",
 					Currency:      "USD",
 					Precision:     2,
 					LedgerID:      "ledger123",
@@ -266,7 +266,7 @@ func TestSearchDocument_MetaData_FlexibleTypes(t *testing.T) {
 			name: "MetaData as object",
 			jsonData: `{
 				"balance_id": "bal-123",
-				"balance": 100.50,
+				"balance": "100.50",
 				"meta_data": {"key": "value", "count": 42}
 			}`,
 			wantErr: false,
@@ -275,7 +275,7 @@ func TestSearchDocument_MetaData_FlexibleTypes(t *testing.T) {
 			name: "MetaData as string",
 			jsonData: `{
 				"balance_id": "bal-123",
-				"balance": 100.50,
+				"balance": "100.50",
 				"meta_data": "string metadata"
 			}`,
 			wantErr: false,
@@ -284,7 +284,7 @@ func TestSearchDocument_MetaData_FlexibleTypes(t *testing.T) {
 			name: "MetaData as null",
 			jsonData: `{
 				"balance_id": "bal-123",
-				"balance": 100.50,
+				"balance": "100.50",
 				"meta_data": null
 			}`,
 			wantErr: false,
@@ -293,7 +293,7 @@ func TestSearchDocument_MetaData_FlexibleTypes(t *testing.T) {
 			name: "MetaData as array",
 			jsonData: `{
 				"balance_id": "bal-123",
-				"balance": 100.50,
+				"balance": "100.50",
 				"meta_data": ["item1", "item2"]
 			}`,
 			wantErr: false,
@@ -310,7 +310,7 @@ func TestSearchDocument_MetaData_FlexibleTypes(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, "bal-123", doc.BalanceID)
-				assert.Equal(t, 100.50, doc.Balance)
+				assert.Equal(t, "100.50", doc.Balance)
 				// MetaData pode ser qualquer tipo, então apenas verificamos que não é nil se não for explicitamente null
 				if tt.name != "MetaData as null" {
 					assert.NotNil(t, doc.MetaData)
@@ -340,7 +340,7 @@ func TestSearchDocument_TransactionFields(t *testing.T) {
 		"meta_data": "{\"QUEUED_PARENT_TRANSACTION\":\"txn_b1a740cc-5b8a-4370-b7f1-d4e4554a3029\",\"transaction_type\":\"posto -> motorista\"}",
 		"overdraft_limit": 0,
 		"parent_transaction": "txn_b1a740cc-5b8a-4370-b7f1-d4e4554a3029",
-		"precise_amount": 566,
+		"precise_amount": "566",
 		"precision": 1,
 		"rate": 1,
 		"reference": "motor-test-34c9737f-1bc8-4495-a33d-0d8207be46c3_q",
@@ -370,7 +370,7 @@ func TestSearchDocument_TransactionFields(t *testing.T) {
 	assert.Equal(t, false, doc.Inflight)
 	assert.Equal(t, true, doc.AllowOverdraft)
 	assert.Equal(t, 0.0, doc.OverdraftLimit)
-	assert.Equal(t, 566.0, doc.PreciseAmount)
+	assert.Equal(t, "566", doc.PreciseAmount)
 	assert.Equal(t, 1, doc.Precision)
 	assert.Equal(t, 1.0, doc.Rate)
 	assert.Equal(t, "motor-test-34c9737f-1bc8-4495-a33d-0d8207be46c3_q", doc.Reference)
