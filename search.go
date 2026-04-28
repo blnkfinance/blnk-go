@@ -96,13 +96,16 @@ type SearchDocument struct {
 	MetaData  interface{}  `json:"meta_data"`  // Can be string, map, or other types
 
 	// Balance fields
-	BalanceID     string `json:"balance_id,omitempty"`
-	Balance       string `json:"balance,omitempty"`
-	CreditBalance string `json:"credit_balance,omitempty"`
-	DebitBalance  string `json:"debit_balance,omitempty"`
-	Currency      string `json:"currency,omitempty"`
-	Precision     int    `json:"precision,omitempty"`
-	LedgerID      string `json:"ledger_id,omitempty"`
+	BalanceID             string `json:"balance_id,omitempty"`
+	Balance               string `json:"balance,omitempty"`
+	CreditBalance         string `json:"credit_balance,omitempty"`
+	DebitBalance          string `json:"debit_balance,omitempty"`
+	Currency              string `json:"currency,omitempty"`
+	Precision             int    `json:"precision,omitempty"`
+	LedgerID              string `json:"ledger_id,omitempty"`
+	InflightBalance       string `json:"inflight_balance"`
+	InflightCreditBalance string `json:"inflight_credit_balance"`
+	InflightDebitBalance  string `json:"inflight_debit_balance"`
 
 	// Transaction fields
 	TransactionID      string       `json:"transaction_id,omitempty"`

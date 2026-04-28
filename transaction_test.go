@@ -678,3 +678,134 @@ func TestTransactionService_Filter_ServerError(t *testing.T) {
 	assert.Equal(t, expectedResp, resp)
 	mockClient.AssertExpectations(t)
 }
+
+func TestCreateTransactionWithInflightCommitDate(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	effectiveDate := time.Date(2023, time.September, 20, 14, 30, 0, 0, time.UTC)
+	inflightCommitDate := time.Date(2023, time.September, 25, 10, 0, 0, 0, time.UTC)
+
+	body := blnkgo.CreateTransactionRequest{
+		ParentTransaction: blnkgo.ParentTransaction{
+			Amount:      1000,
+			Reference:   "ref-inflight-commit",
+			Precision:   100,
+			Currency:    "USD",
+			Source:      "@bank-account",
+			Destination: "@World",
+			MetaData: map[string]interface{}{
+				"transaction_type": "deposit",
+				"customer_name":    "Bob Smith",
+				"customer_id":      "bob-1234",
+			},
+			Description:   "Inflight Commit Test",
+			EffectiveDate: &effectiveDate,
+		},
+		Inflight:           true,
+		InflightCommitDate: &inflightCommitDate,
+	}
+	fixedTime := time.Date(2023, time.October, 1, 0, 0, 0, 0, time.UTC)
+
+	mockClient.On("NewRequest", "transactions", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusCreated}, nil).Run(func(args mock.Arguments) {
+		transaction := args.Get(1).(*blnkgo.Transaction)
+		*transaction = blnkgo.Transaction{
+			ParentTransaction: body.ParentTransaction,
+			TransactionID:     "txn-inflight-commit-123",
+			CreatedAt:         fixedTime,
+		}
+	})
+
+	transaction, resp, err := svc.Create(body)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t, "txn-inflight-commit-123", transaction.TransactionID)
+	assert.Equal(t, fixedTime, transaction.CreatedAt)
+
+	mockClient.AssertExpectations(t)
+}
+
+func TestCreateTransactionWithInflightExpiryAndCommitDate(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	effectiveDate := time.Date(2023, time.September, 20, 14, 30, 0, 0, time.UTC)
+	inflightExpiryDate := time.Date(2023, time.September, 30, 23, 59, 59, 0, time.UTC)
+	inflightCommitDate := time.Date(2023, time.September, 25, 10, 0, 0, 0, time.UTC)
+
+	body := blnkgo.CreateTransactionRequest{
+		ParentTransaction: blnkgo.ParentTransaction{
+			Amount:      2500,
+			Reference:   "ref-both-dates",
+			Precision:   100,
+			Currency:    "EUR",
+			Source:      "@escrow-account",
+			Destination: "@merchant",
+			MetaData: map[string]interface{}{
+				"transaction_type": "escrow_release",
+				"order_id":         "order-9876",
+			},
+			Description:   "Escrow with both dates",
+			EffectiveDate: &effectiveDate,
+		},
+		Inflight:           true,
+		InflightExpiryDate: &inflightExpiryDate,
+		InflightCommitDate: &inflightCommitDate,
+	}
+	fixedTime := time.Date(2023, time.October, 1, 0, 0, 0, 0, time.UTC)
+
+	mockClient.On("NewRequest", "transactions", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusCreated}, nil).Run(func(args mock.Arguments) {
+		transaction := args.Get(1).(*blnkgo.Transaction)
+		*transaction = blnkgo.Transaction{
+			ParentTransaction: body.ParentTransaction,
+			TransactionID:     "txn-both-dates-456",
+			CreatedAt:         fixedTime,
+		}
+	})
+
+	transaction, resp, err := svc.Create(body)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t, "txn-both-dates-456", transaction.TransactionID)
+	assert.Equal(t, fixedTime, transaction.CreatedAt)
+
+	mockClient.AssertExpectations(t)
+}
+
+func TestCreateTransactionInflightCommitDateWithoutInflight(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	inflightCommitDate := time.Date(2023, time.September, 25, 10, 0, 0, 0, time.UTC)
+
+	body := blnkgo.CreateTransactionRequest{
+		ParentTransaction: blnkgo.ParentTransaction{
+			Amount:      500,
+			Reference:   "ref-commit-no-inflight",
+			Precision:   100,
+			Currency:    "USD",
+			Source:      "@bank-account",
+			Destination: "@World",
+			Description: "Commit date without inflight flag",
+		},
+		Inflight:           false,
+		InflightCommitDate: &inflightCommitDate,
+	}
+	fixedTime := time.Date(2023, time.October, 1, 0, 0, 0, 0, time.UTC)
+
+	mockClient.On("NewRequest", "transactions", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusCreated}, nil).Run(func(args mock.Arguments) {
+		transaction := args.Get(1).(*blnkgo.Transaction)
+		*transaction = blnkgo.Transaction{
+			ParentTransaction: body.ParentTransaction,
+			TransactionID:     "txn-no-inflight-789",
+			CreatedAt:         fixedTime,
+		}
+	})
+
+	transaction, resp, err := svc.Create(body)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t, "txn-no-inflight-789", transaction.TransactionID)
+
+	mockClient.AssertExpectations(t)
+}

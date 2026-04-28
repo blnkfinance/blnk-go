@@ -37,6 +37,7 @@ type CreateTransactionRequest struct {
 	ParentTransaction
 	Inflight           bool       `json:"inflight,omitempty"`
 	InflightExpiryDate *time.Time `json:"inflight_expiry_date,omitempty"`
+	InflightCommitDate *time.Time `json:"inflight_commit_date,omitempty"`
 	ScheduledFor       *time.Time `json:"scheduled_for,omitempty"`
 	AllowOverdraft     bool       `json:"allow_overdraft,omitempty"`
 }
