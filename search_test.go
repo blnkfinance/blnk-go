@@ -46,15 +46,18 @@ func TestSearchService_SearchDocument_Success(t *testing.T) {
 		Hits: []blnkgo.SearchHit{
 			{
 				Document: blnkgo.SearchDocument{
-					BalanceID:     "balance123",
-					Balance:       "100.0",
-					CreditBalance: "50.0",
-					DebitBalance:  "50.0",
-					Currency:      "USD",
-					Precision:     2,
-					LedgerID:      "ledger123",
-					CreatedAt:     blnkgo.FlexibleTime{Time: time.Now()},
-					MetaData:      map[string]interface{}{"key": "value"},
+					BalanceID:             "balance123",
+					Balance:               "100.0",
+					CreditBalance:         "50.0",
+					DebitBalance:          "50.0",
+					Currency:              "USD",
+					Precision:             2,
+					LedgerID:              "ledger123",
+					InflightBalance:       "25.0",
+					InflightCreditBalance: "15.0",
+					InflightDebitBalance:  "10.0",
+					CreatedAt:             blnkgo.FlexibleTime{Time: time.Now()},
+					MetaData:              map[string]interface{}{"key": "value"},
 				},
 			},
 		},
@@ -329,6 +332,38 @@ func TestSearchDocument_MetaData_FlexibleTypes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSearchDocument_BalanceInflightFields(t *testing.T) {
+	balanceJSON := `{
+		"balance_id": "bal-123",
+		"balance": "100.50",
+		"credit_balance": "75.25",
+		"debit_balance": "25.25",
+		"inflight_balance": "10.00",
+		"inflight_credit_balance": "7.50",
+		"inflight_debit_balance": "2.50",
+		"currency": "USD",
+		"ledger_id": "ledger-123",
+		"created_at": 1672531200,
+		"meta_data": {"owner": "customer-1"}
+	}`
+
+	var doc blnkgo.SearchDocument
+	err := json.Unmarshal([]byte(balanceJSON), &doc)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "bal-123", doc.BalanceID)
+	assert.Equal(t, "100.50", doc.Balance)
+	assert.Equal(t, "75.25", doc.CreditBalance)
+	assert.Equal(t, "25.25", doc.DebitBalance)
+	assert.Equal(t, "10.00", doc.InflightBalance)
+	assert.Equal(t, "7.50", doc.InflightCreditBalance)
+	assert.Equal(t, "2.50", doc.InflightDebitBalance)
+	assert.Equal(t, "USD", doc.Currency)
+	assert.Equal(t, "ledger-123", doc.LedgerID)
+	assert.Equal(t, time.Unix(1672531200, 0), doc.CreatedAt.Time)
+	assert.NotNil(t, doc.MetaData)
 }
 
 func TestSearchDocument_TransactionFields(t *testing.T) {
