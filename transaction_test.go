@@ -679,6 +679,43 @@ func TestTransactionService_Filter_ServerError(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
+func TestCreateTransactionWithAtomicFlag(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+
+	body := blnkgo.CreateTransactionRequest{
+		ParentTransaction: blnkgo.ParentTransaction{
+			Amount:      1000,
+			Reference:   "ref-atomic",
+			Precision:   100,
+			Currency:    "USD",
+			Source:      "@bank-account",
+			Destination: "@World",
+			Description: "Atomic transaction",
+			Atomic:      true,
+		},
+	}
+	fixedTime := time.Date(2023, time.October, 1, 0, 0, 0, 0, time.UTC)
+
+	mockClient.On("NewRequest", "transactions", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusCreated}, nil).Run(func(args mock.Arguments) {
+		transaction := args.Get(1).(*blnkgo.Transaction)
+		*transaction = blnkgo.Transaction{
+			ParentTransaction: body.ParentTransaction,
+			TransactionID:     "txn-atomic-123",
+			CreatedAt:         fixedTime,
+		}
+	})
+
+	transaction, resp, err := svc.Create(body)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t, "txn-atomic-123", transaction.TransactionID)
+	assert.True(t, transaction.Atomic)
+
+	mockClient.AssertExpectations(t)
+}
+
 func TestCreateTransactionWithInflightCommitDate(t *testing.T) {
 	mockClient, svc := setupTransactionService()
 	effectiveDate := time.Date(2023, time.September, 20, 14, 30, 0, 0, time.UTC)
