@@ -168,6 +168,118 @@ func TestLedgerSerice_Get_EmptyID(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
+func TestLedgerService_Update_Success(t *testing.T) {
+	mockClient, svc := setupLedgerService()
+	ledgerID := "ldg_123"
+	body := blnkgo.UpdateLedgerRequest{
+		Name: "Updated Customer Savings Account",
+	}
+
+	fixedTime := time.Date(2023, time.October, 1, 0, 0, 0, 0, time.UTC)
+	expectedResponse := &blnkgo.Ledger{
+		LedgerID:  ledgerID,
+		Name:      body.Name,
+		CreatedAt: fixedTime,
+	}
+
+	mockClient.On("NewRequest", fmt.Sprintf("ledgers/%s", ledgerID), http.MethodPut, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusOK,
+	}, nil).Run(func(args mock.Arguments) {
+		ledger := args.Get(1).(*blnkgo.Ledger)
+		*ledger = *expectedResponse
+	})
+
+	ledger, resp, err := svc.Update(ledgerID, body)
+
+	assert.NoError(t, err)
+	assert.Equal(t, expectedResponse, ledger)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	mockClient.AssertExpectations(t)
+}
+
+func TestLedgerService_Update_CorrectEndpoint(t *testing.T) {
+	mockClient, svc := setupLedgerService()
+	ledgerID := "ldg_123"
+	body := blnkgo.UpdateLedgerRequest{Name: "Updated Name"}
+	expectedEndpoint := fmt.Sprintf("ledgers/%s", ledgerID)
+
+	mockClient.On("NewRequest", expectedEndpoint, http.MethodPut, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusOK,
+	}, nil)
+
+	_, _, _ = svc.Update(ledgerID, body)
+
+	mockClient.AssertCalled(t, "NewRequest", expectedEndpoint, http.MethodPut, body)
+	mockClient.AssertExpectations(t)
+}
+
+func TestLedgerService_Update_EmptyID(t *testing.T) {
+	mockClient, svc := setupLedgerService()
+	body := blnkgo.UpdateLedgerRequest{Name: "Updated Name"}
+
+	ledger, resp, err := svc.Update("", body)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "id is required")
+	assert.Nil(t, ledger)
+	assert.Nil(t, resp)
+	mockClient.AssertNotCalled(t, "NewRequest")
+	mockClient.AssertNotCalled(t, "CallWithRetry")
+	mockClient.AssertExpectations(t)
+}
+
+func TestLedgerService_Update_EmptyName(t *testing.T) {
+	mockClient, svc := setupLedgerService()
+	body := blnkgo.UpdateLedgerRequest{}
+
+	ledger, resp, err := svc.Update("ldg_123", body)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "name is required")
+	assert.Nil(t, ledger)
+	assert.Nil(t, resp)
+	mockClient.AssertNotCalled(t, "NewRequest")
+	mockClient.AssertNotCalled(t, "CallWithRetry")
+	mockClient.AssertExpectations(t)
+}
+
+func TestLedgerService_Update_NewRequestError(t *testing.T) {
+	mockClient, svc := setupLedgerService()
+	ledgerID := "ldg_123"
+	body := blnkgo.UpdateLedgerRequest{Name: "Updated Name"}
+
+	mockClient.On("NewRequest", fmt.Sprintf("ledgers/%s", ledgerID), http.MethodPut, body).
+		Return(nil, fmt.Errorf("request error"))
+
+	ledger, resp, err := svc.Update(ledgerID, body)
+
+	assert.Error(t, err)
+	assert.Nil(t, ledger)
+	assert.Nil(t, resp)
+	mockClient.AssertNotCalled(t, "CallWithRetry")
+	mockClient.AssertExpectations(t)
+}
+
+func TestLedgerService_Update_ServerError(t *testing.T) {
+	mockClient, svc := setupLedgerService()
+	ledgerID := "ldg_123"
+	body := blnkgo.UpdateLedgerRequest{Name: "Updated Name"}
+	expectedResp := &http.Response{StatusCode: http.StatusInternalServerError}
+
+	mockClient.On("NewRequest", fmt.Sprintf("ledgers/%s", ledgerID), http.MethodPut, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(expectedResp, fmt.Errorf("server error"))
+
+	ledger, resp, err := svc.Update(ledgerID, body)
+
+	assert.Error(t, err)
+	assert.Nil(t, ledger)
+	assert.Equal(t, expectedResp, resp)
+	mockClient.AssertExpectations(t)
+}
+
 func TestLedgerService_Filter_Success(t *testing.T) {
 	mockClient, svc := setupLedgerService()
 
