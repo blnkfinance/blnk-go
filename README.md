@@ -160,6 +160,24 @@ func main() {
 
 This creates a new ledger for storing customer balances.
 
+### Updating a Ledger Name
+
+Rename an existing ledger without changing its ID or affecting balances and transactions:
+
+```go
+updateBody := blnkgo.UpdateLedgerRequest{
+    Name: "Updated Customer Savings Account",
+}
+
+updatedLedger, resp, err := client.Ledger.Update(newLedger.LedgerID, updateBody)
+if err != nil {
+    fmt.Printf("Error updating ledger: %v\n", err)
+    return
+}
+
+fmt.Printf("Ledger Updated: %+v\n", updatedLedger)
+```
+
 ---
 
 ## 5. Creating Balances
