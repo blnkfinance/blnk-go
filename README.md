@@ -241,6 +241,24 @@ if err != nil {
 fmt.Printf("Identity linked: %s\n", result.Message)
 ```
 
+### Creating Balance Snapshots
+
+Capture daily balance snapshots in batches. Optionally set `BatchSize` to control how many balances are processed per batch (server default is 1000):
+
+```go
+snapshotBody := blnkgo.CreateBalanceSnapshotRequest{
+    BatchSize: 500,
+}
+
+result, resp, err := client.LedgerBalance.CreateSnapshot(snapshotBody)
+if err != nil {
+    fmt.Printf("Error creating balance snapshot: %v\n", err)
+    return
+}
+
+fmt.Printf("Snapshot started: %s\n", result.Message)
+```
+
 ---
 
 ## 6. Recording Transactions
