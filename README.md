@@ -223,6 +223,24 @@ fmt.Printf("Balance Lineage: %+v\n", lineage)
 fmt.Printf("Total with lineage: %s\n", lineage.TotalWithLineage.String())
 ```
 
+### Linking an Identity to a Balance
+
+Associate an existing identity with a balance:
+
+```go
+updateBody := blnkgo.UpdateBalanceIdentityRequest{
+    IdentityID: "idt_3b63c8da-af29-4cc3-ad38-df17d87456e6",
+}
+
+result, resp, err := client.LedgerBalance.UpdateIdentity(newBalance.BalanceID, updateBody)
+if err != nil {
+    fmt.Printf("Error updating balance identity: %v\n", err)
+    return
+}
+
+fmt.Printf("Identity linked: %s\n", result.Message)
+```
+
 ---
 
 ## 6. Recording Transactions
