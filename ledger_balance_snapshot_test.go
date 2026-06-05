@@ -114,11 +114,17 @@ func TestLedgerBalanceService_CreateSnapshot_ServerError(t *testing.T) {
 }
 
 func TestCreateBalanceSnapshotResponse_UnmarshalJSON(t *testing.T) {
-	payload := `{"message":"Snapshotting in progress. should be completed shortly"}`
+	// Core v0.14.3 TakeBalanceSnapshots response: {"message":"Snapshotting in progress. should be completed shortly"}
+	payload := []byte(`{"message":"Snapshotting in progress. should be completed shortly"}`)
 
 	var response blnkgo.CreateBalanceSnapshotResponse
-	err := json.Unmarshal([]byte(payload), &response)
+	err := json.Unmarshal(payload, &response)
 
 	assert.NoError(t, err)
 	assert.Equal(t, "Snapshotting in progress. should be completed shortly", response.Message)
+
+	// Round-trip confirms struct tags match the API field name.
+	encoded, err := json.Marshal(response)
+	assert.NoError(t, err)
+	assert.JSONEq(t, string(payload), string(encoded))
 }
