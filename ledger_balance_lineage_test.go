@@ -1,6 +1,7 @@
 package blnkgo_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -10,6 +11,66 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+// TestBalanceLineage_UnmarshalJSON verifies BalanceLineage decodes the API
+// response contract from docs.blnkfinance.com/reference/get-balance-lineage.
+func TestBalanceLineage_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload string
+	}{
+		{
+			name: "docs example with string amounts",
+			payload: `{
+				"balance_id": "bln_5ce86029-3c2e-4e2a-aae2-7fb931ca4c4f",
+				"aggregate_balance_id": "bln_aggregate_shadow_balance_id",
+				"total_with_lineage": "7500",
+				"providers": [{
+					"provider": "stripe",
+					"amount": "10000",
+					"available": "7500",
+					"spent": "2500",
+					"shadow_balance_id": "bln_shadow_balance_id"
+				}]
+			}`,
+		},
+		{
+			name: "core serialization with numeric amounts",
+			payload: `{
+				"balance_id": "bln_5ce86029-3c2e-4e2a-aae2-7fb931ca4c4f",
+				"aggregate_balance_id": "bln_aggregate_shadow_balance_id",
+				"total_with_lineage": 7500,
+				"providers": [{
+					"provider": "stripe",
+					"amount": 10000,
+					"available": 7500,
+					"spent": 2500,
+					"shadow_balance_id": "bln_shadow_balance_id"
+				}]
+			}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var lineage blnkgo.BalanceLineage
+			err := json.Unmarshal([]byte(tt.payload), &lineage)
+			assert.NoError(t, err)
+
+			assert.Equal(t, "bln_5ce86029-3c2e-4e2a-aae2-7fb931ca4c4f", lineage.BalanceID)
+			assert.Equal(t, "bln_aggregate_shadow_balance_id", lineage.AggregateBalanceID)
+			assert.Equal(t, 0, big.NewInt(7500).Cmp(lineage.TotalWithLineage))
+			assert.Len(t, lineage.Providers, 1)
+
+			provider := lineage.Providers[0]
+			assert.Equal(t, "stripe", provider.Provider)
+			assert.Equal(t, 0, big.NewInt(10000).Cmp(provider.Amount))
+			assert.Equal(t, 0, big.NewInt(7500).Cmp(provider.Available))
+			assert.Equal(t, 0, big.NewInt(2500).Cmp(provider.Spent))
+			assert.Equal(t, "bln_shadow_balance_id", provider.ShadowBalanceID)
+		})
+	}
+}
 
 func TestLedgerBalanceService_GetLineage_Success(t *testing.T) {
 	mockClient, svc := setupLedgerBalanceService()
