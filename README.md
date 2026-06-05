@@ -208,6 +208,21 @@ if err != nil {
 fmt.Printf("Balance Created: %+v\n", newBalance)
 ```
 
+### Viewing Balance Lineage
+
+For balances with fund lineage tracking enabled, retrieve the provider breakdown (received, spent, available):
+
+```go
+lineage, resp, err := client.LedgerBalance.GetLineage(newBalance.BalanceID)
+if err != nil {
+    fmt.Printf("Error fetching balance lineage: %v\n", err)
+    return
+}
+
+fmt.Printf("Balance Lineage: %+v\n", lineage)
+fmt.Printf("Total with lineage: %s\n", lineage.TotalWithLineage.String())
+```
+
 ---
 
 ## 6. Recording Transactions
