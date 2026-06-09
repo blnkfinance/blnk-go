@@ -429,6 +429,31 @@ for _, r := range bulkResult.Results {
 }
 ```
 
+#### Bulk Void Inflight Transactions
+
+Void multiple independently-created inflight transactions in a single call:
+
+```go
+bulkVoidBody := blnkgo.BulkVoidInflightRequest{
+    TransactionIDs: []string{
+        "txn_id_1",
+        "txn_id_2",
+        "txn_id_3",
+    },
+}
+
+bulkResult, resp, err := client.Transaction.BulkVoidInflight(bulkVoidBody)
+if err != nil {
+    fmt.Printf("Error bulk voiding inflight transactions: %v\n", err)
+    return
+}
+
+fmt.Printf("Bulk void: %d succeeded, %d failed\n", bulkResult.Succeeded, bulkResult.Failed)
+for _, r := range bulkResult.Results {
+    fmt.Printf("  %s: %s\n", r.TransactionID, r.Status)
+}
+```
+
 ### Multi-Source/Destination Transactions
 
 Split a transaction across multiple sources or destinations with custom distribution rules.
