@@ -338,6 +338,23 @@ fmt.Printf("Bulk batch %s: %d transactions (%s)\n",
     bulkResult.BatchID, bulkResult.TransactionCount, bulkResult.Status)
 ```
 
+### Viewing Transaction Lineage
+
+For transactions involving lineage-enabled balances, retrieve the provider fund allocation and internal shadow transactions:
+
+```go
+lineage, resp, err := client.Transaction.GetLineage(newTransaction.TransactionID)
+if err != nil {
+    fmt.Printf("Error fetching transaction lineage: %v\n", err)
+    return
+}
+
+fmt.Printf("Transaction Lineage: %+v\n", lineage)
+for _, alloc := range lineage.FundAllocation {
+    fmt.Printf("Provider %s allocated %s\n", alloc.Provider, alloc.Amount.String())
+}
+```
+
 ---
 
 ## 7. Advanced Features
