@@ -3,6 +3,7 @@ package blnkgo_test
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -46,6 +47,22 @@ func TestTransactionService_GetByReference_Success(t *testing.T) {
 	assert.Equal(t, expectedResponse, transaction)
 	assert.NotNil(t, resp)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	mockClient.AssertExpectations(t)
+}
+
+func TestTransactionService_GetByReference_PathEscapesReference(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	reference := "ref/with space?query#hash%25"
+	endpoint := fmt.Sprintf("transactions/reference/%s", url.PathEscape(reference))
+
+	mockClient.On("NewRequest", endpoint, http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusOK,
+	}, nil)
+
+	_, _, _ = svc.GetByReference(reference)
+
+	mockClient.AssertCalled(t, "NewRequest", endpoint, http.MethodGet, nil)
 	mockClient.AssertExpectations(t)
 }
 
