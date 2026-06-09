@@ -105,6 +105,27 @@ type BulkCommitInflightResponse struct {
 	Results   []BulkCommitInflightResult `json:"results"`
 }
 
+// BulkVoidInflightRequest voids many independently-created inflight
+// transactions in one call.
+type BulkVoidInflightRequest struct {
+	TransactionIDs []string `json:"transaction_ids"`
+}
+
+// BulkVoidInflightResult is the per-item outcome in BulkVoidInflightResponse.
+type BulkVoidInflightResult struct {
+	TransactionID string `json:"transaction_id"`
+	Status        string `json:"status"`
+	Code          string `json:"code,omitempty"`
+	Message       string `json:"message,omitempty"`
+}
+
+// BulkVoidInflightResponse is the envelope returned by bulk void inflight.
+type BulkVoidInflightResponse struct {
+	Succeeded int                      `json:"succeeded"`
+	Failed    int                      `json:"failed"`
+	Results   []BulkVoidInflightResult `json:"results"`
+}
+
 func (s *TransactionService) Create(body CreateTransactionRequest) (*Transaction, *http.Response, error) {
 	//validate the trannsaction
 	if err := ValidateCreateTransacation(body); err != nil {
@@ -136,6 +157,25 @@ func (s *TransactionService) BulkCommitInflight(body BulkCommitInflightRequest) 
 	}
 
 	response := new(BulkCommitInflightResponse)
+	resp, err := s.client.CallWithRetry(req, response)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return response, resp, nil
+}
+
+func (s *TransactionService) BulkVoidInflight(body BulkVoidInflightRequest) (*BulkVoidInflightResponse, *http.Response, error) {
+	if err := ValidateBulkVoidInflight(body); err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest("transactions/inflight/bulk/void", http.MethodPost, body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	response := new(BulkVoidInflightResponse)
 	resp, err := s.client.CallWithRetry(req, response)
 	if err != nil {
 		return nil, resp, err

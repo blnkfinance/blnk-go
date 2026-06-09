@@ -67,6 +67,21 @@ func ValidateBulkCommitInflight(b BulkCommitInflightRequest) error {
 	return nil
 }
 
+func ValidateBulkVoidInflight(b BulkVoidInflightRequest) error {
+	if len(b.TransactionIDs) == 0 {
+		return errors.New("validation error: transaction_ids array cannot be empty")
+	}
+	if len(b.TransactionIDs) > MaxBulkInflightItems {
+		return fmt.Errorf("validation error: too many transaction_ids; max is %d", MaxBulkInflightItems)
+	}
+	for i, id := range b.TransactionIDs {
+		if id == "" {
+			return fmt.Errorf("validation error: transaction_id is required at index %d", i)
+		}
+	}
+	return nil
+}
+
 func ValidateCreateBulkTransaction(b CreateBulkTransactionRequest) error {
 	if len(b.Transactions) == 0 {
 		return errors.New("validation error: transactions array cannot be empty")
