@@ -2,6 +2,7 @@ package blnkgo
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 )
@@ -46,6 +47,25 @@ func ValidateCreateTransacation(t CreateTransactionRequest) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func ValidateCreateBulkTransaction(b CreateBulkTransactionRequest) error {
+	if len(b.Transactions) == 0 {
+		return errors.New("validation error: transactions array cannot be empty")
+	}
+
+	refs := make(map[string]struct{}, len(b.Transactions))
+	for i, tx := range b.Transactions {
+		if err := ValidateCreateTransacation(tx); err != nil {
+			return fmt.Errorf("transaction at index %d: %w", i, err)
+		}
+		if _, exists := refs[tx.Reference]; exists {
+			return errors.New("validation error: all transactions must have unique references within the bulk request")
+		}
+		refs[tx.Reference] = struct{}{}
 	}
 
 	return nil
