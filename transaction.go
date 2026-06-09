@@ -71,6 +71,40 @@ type CreateBulkTransactionResponse struct {
 	Message          string `json:"message,omitempty"`
 }
 
+// MaxBulkInflightItems caps the number of transactions accepted in a single
+// bulk commit or bulk void call.
+const MaxBulkInflightItems = 100
+
+// BulkCommitInflightItem describes one transaction in a bulk commit request.
+// Zero amount means commit the full remaining inflight amount; non-zero performs
+// a partial commit. PreciseAmount, when set, takes precedence over Amount.
+type BulkCommitInflightItem struct {
+	TransactionID string   `json:"transaction_id"`
+	Amount        float64  `json:"amount,omitempty"`
+	PreciseAmount *big.Int `json:"precise_amount,omitempty"`
+}
+
+// BulkCommitInflightRequest commits many independently-created inflight
+// transactions in one call.
+type BulkCommitInflightRequest struct {
+	Transactions []BulkCommitInflightItem `json:"transactions"`
+}
+
+// BulkCommitInflightResult is the per-item outcome in BulkCommitInflightResponse.
+type BulkCommitInflightResult struct {
+	TransactionID string `json:"transaction_id"`
+	Status        string `json:"status"`
+	Code          string `json:"code,omitempty"`
+	Message       string `json:"message,omitempty"`
+}
+
+// BulkCommitInflightResponse is the envelope returned by bulk commit inflight.
+type BulkCommitInflightResponse struct {
+	Succeeded int                        `json:"succeeded"`
+	Failed    int                        `json:"failed"`
+	Results   []BulkCommitInflightResult `json:"results"`
+}
+
 func (s *TransactionService) Create(body CreateTransactionRequest) (*Transaction, *http.Response, error) {
 	//validate the trannsaction
 	if err := ValidateCreateTransacation(body); err != nil {
@@ -89,6 +123,25 @@ func (s *TransactionService) Create(body CreateTransactionRequest) (*Transaction
 	}
 
 	return transaction, resp, nil
+}
+
+func (s *TransactionService) BulkCommitInflight(body BulkCommitInflightRequest) (*BulkCommitInflightResponse, *http.Response, error) {
+	if err := ValidateBulkCommitInflight(body); err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest("transactions/inflight/bulk/commit", http.MethodPost, body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	response := new(BulkCommitInflightResponse)
+	resp, err := s.client.CallWithRetry(req, response)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return response, resp, nil
 }
 
 func (s *TransactionService) CreateBulk(body CreateBulkTransactionRequest) (*CreateBulkTransactionResponse, *http.Response, error) {

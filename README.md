@@ -404,6 +404,31 @@ voidedTransaction, resp, err := client.Transaction.Update(
 )
 ```
 
+#### Bulk Commit Inflight Transactions
+
+Commit multiple independently-created inflight transactions in a single call:
+
+```go
+bulkCommitBody := blnkgo.BulkCommitInflightRequest{
+    Transactions: []blnkgo.BulkCommitInflightItem{
+        {TransactionID: "txn_id_1"},
+        {TransactionID: "txn_id_2", Amount: 40},
+        {TransactionID: "txn_id_3", PreciseAmount: big.NewInt(125034)},
+    },
+}
+
+bulkResult, resp, err := client.Transaction.BulkCommitInflight(bulkCommitBody)
+if err != nil {
+    fmt.Printf("Error bulk committing inflight transactions: %v\n", err)
+    return
+}
+
+fmt.Printf("Bulk commit: %d succeeded, %d failed\n", bulkResult.Succeeded, bulkResult.Failed)
+for _, r := range bulkResult.Results {
+    fmt.Printf("  %s: %s\n", r.TransactionID, r.Status)
+}
+```
+
 ### Multi-Source/Destination Transactions
 
 Split a transaction across multiple sources or destinations with custom distribution rules.
