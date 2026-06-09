@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -151,6 +152,26 @@ func (s *TransactionService) Get(transactionID string) (*Transaction, *http.Resp
 	}
 
 	u := fmt.Sprintf("transactions/%s", transactionID)
+	req, err := s.client.NewRequest(u, http.MethodGet, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	transaction := new(Transaction)
+	resp, err := s.client.CallWithRetry(req, transaction)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return transaction, resp, nil
+}
+
+func (s *TransactionService) GetByReference(reference string) (*Transaction, *http.Response, error) {
+	if reference == "" {
+		return nil, nil, fmt.Errorf("reference is required")
+	}
+
+	u := fmt.Sprintf("transactions/reference/%s", url.PathEscape(reference))
 	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {
 		return nil, nil, err
