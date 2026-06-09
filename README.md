@@ -338,6 +338,20 @@ fmt.Printf("Bulk batch %s: %d transactions (%s)\n",
     bulkResult.BatchID, bulkResult.TransactionCount, bulkResult.Status)
 ```
 
+### Getting a Transaction by Reference
+
+Look up a transaction using its unique reference string:
+
+```go
+transaction, resp, err := client.Transaction.GetByReference("ref_8d2ce2f0-0d75-4a91-9d43-2ad2c2e6b9ad")
+if err != nil {
+    fmt.Printf("Error fetching transaction by reference: %v\n", err)
+    return
+}
+
+fmt.Printf("Transaction %s: %+v\n", transaction.TransactionID, transaction)
+```
+
 ---
 
 ## 7. Advanced Features
