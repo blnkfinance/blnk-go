@@ -295,6 +295,49 @@ if err != nil {
 fmt.Printf("Transaction Recorded: %+v\n", newTransaction)
 ```
 
+### Recording Bulk Transactions
+
+Submit multiple transactions in a single request. Set `Atomic` to ensure all transactions succeed or fail together:
+
+```go
+bulkBody := blnkgo.CreateBulkTransactionRequest{
+    Atomic: true,
+    Transactions: []blnkgo.CreateTransactionRequest{
+        {
+            ParentTransaction: blnkgo.ParentTransaction{
+                Amount:      500,
+                Reference:   "bulk_ref_001",
+                Currency:    "USD",
+                Precision:   100,
+                Source:      "bln_source_id",
+                Destination: "bln_destination_id",
+                Description: "Bulk payment 1",
+            },
+        },
+        {
+            ParentTransaction: blnkgo.ParentTransaction{
+                Amount:      750,
+                Reference:   "bulk_ref_002",
+                Currency:    "USD",
+                Precision:   100,
+                Source:      "bln_source_id",
+                Destination: "bln_destination_id",
+                Description: "Bulk payment 2",
+            },
+        },
+    },
+}
+
+bulkResult, resp, err := client.Transaction.CreateBulk(bulkBody)
+if err != nil {
+    fmt.Printf("Error creating bulk transactions: %v\n", err)
+    return
+}
+
+fmt.Printf("Bulk batch %s: %d transactions (%s)\n",
+    bulkResult.BatchID, bulkResult.TransactionCount, bulkResult.Status)
+```
+
 ---
 
 ## 7. Advanced Features

@@ -846,3 +846,165 @@ func TestCreateTransactionInflightCommitDateWithoutInflight(t *testing.T) {
 
 	mockClient.AssertExpectations(t)
 }
+
+func validBulkTransactionRequest() blnkgo.CreateBulkTransactionRequest {
+	return blnkgo.CreateBulkTransactionRequest{
+		Atomic: true,
+		Transactions: []blnkgo.CreateTransactionRequest{
+			{
+				ParentTransaction: blnkgo.ParentTransaction{
+					Amount:      500,
+					Reference:   "bulk-ref-1",
+					Precision:   100,
+					Currency:    "USD",
+					Source:      "@FundingPool",
+					Destination: "@Recipient",
+					Description: "Bulk transaction 1",
+				},
+			},
+			{
+				ParentTransaction: blnkgo.ParentTransaction{
+					Amount:      750,
+					Reference:   "bulk-ref-2",
+					Precision:   100,
+					Currency:    "USD",
+					Source:      "@FundingPool",
+					Destination: "@Recipient",
+					Description: "Bulk transaction 2",
+				},
+			},
+		},
+	}
+}
+
+func TestTransactionService_CreateBulk_Success(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	body := validBulkTransactionRequest()
+
+	expectedResponse := &blnkgo.CreateBulkTransactionResponse{
+		BatchID:          "bulk_abc123",
+		Status:           "applied",
+		TransactionCount: 2,
+	}
+
+	mockClient.On("NewRequest", "transactions/bulk", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusCreated,
+	}, nil).Run(func(args mock.Arguments) {
+		response := args.Get(1).(*blnkgo.CreateBulkTransactionResponse)
+		*response = *expectedResponse
+	})
+
+	result, resp, err := svc.CreateBulk(body)
+
+	assert.NoError(t, err)
+	assert.Equal(t, expectedResponse, result)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	mockClient.AssertExpectations(t)
+}
+
+func TestTransactionService_CreateBulk_AsyncSuccess(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	body := validBulkTransactionRequest()
+	body.RunAsync = true
+
+	expectedResponse := &blnkgo.CreateBulkTransactionResponse{
+		BatchID: "bulk_async123",
+		Status:  "processing",
+		Message: "Bulk transaction processing started",
+	}
+
+	mockClient.On("NewRequest", "transactions/bulk", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusAccepted,
+	}, nil).Run(func(args mock.Arguments) {
+		response := args.Get(1).(*blnkgo.CreateBulkTransactionResponse)
+		*response = *expectedResponse
+	})
+
+	result, resp, err := svc.CreateBulk(body)
+
+	assert.NoError(t, err)
+	assert.Equal(t, expectedResponse, result)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
+	mockClient.AssertExpectations(t)
+}
+
+func TestTransactionService_CreateBulk_EmptyTransactions(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+
+	result, resp, err := svc.CreateBulk(blnkgo.CreateBulkTransactionRequest{})
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "transactions array cannot be empty")
+	assert.Nil(t, result)
+	assert.Nil(t, resp)
+	mockClient.AssertNotCalled(t, "NewRequest")
+	mockClient.AssertNotCalled(t, "CallWithRetry")
+}
+
+func TestTransactionService_CreateBulk_InvalidTransaction(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	body := validBulkTransactionRequest()
+	body.Transactions[0].Source = ""
+
+	result, resp, err := svc.CreateBulk(body)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "transaction at index 0")
+	assert.Nil(t, result)
+	assert.Nil(t, resp)
+	mockClient.AssertNotCalled(t, "NewRequest")
+	mockClient.AssertNotCalled(t, "CallWithRetry")
+}
+
+func TestTransactionService_CreateBulk_DuplicateReferences(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	body := validBulkTransactionRequest()
+	body.Transactions[1].Reference = body.Transactions[0].Reference
+
+	result, resp, err := svc.CreateBulk(body)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unique references")
+	assert.Nil(t, result)
+	assert.Nil(t, resp)
+	mockClient.AssertNotCalled(t, "NewRequest")
+	mockClient.AssertNotCalled(t, "CallWithRetry")
+}
+
+func TestTransactionService_CreateBulk_NewRequestError(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	body := validBulkTransactionRequest()
+
+	mockClient.On("NewRequest", "transactions/bulk", http.MethodPost, body).Return(nil, errors.New("failed to create request"))
+
+	result, resp, err := svc.CreateBulk(body)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to create request")
+	assert.Nil(t, result)
+	assert.Nil(t, resp)
+	mockClient.AssertNotCalled(t, "CallWithRetry")
+	mockClient.AssertExpectations(t)
+}
+
+func TestTransactionService_CreateBulk_ServerError(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	body := validBulkTransactionRequest()
+
+	mockClient.On("NewRequest", "transactions/bulk", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusBadRequest,
+	}, errors.New("invalid destination"))
+
+	result, resp, err := svc.CreateBulk(body)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	mockClient.AssertExpectations(t)
+}

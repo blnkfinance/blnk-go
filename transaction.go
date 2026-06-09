@@ -55,6 +55,21 @@ type UpdateStatus struct {
 	PreciseAmount *big.Int       `json:"precise_amount"`
 }
 
+type CreateBulkTransactionRequest struct {
+	Transactions []CreateTransactionRequest `json:"transactions"`
+	Inflight     bool                       `json:"inflight,omitempty"`
+	Atomic       bool                       `json:"atomic,omitempty"`
+	RunAsync     bool                       `json:"run_async,omitempty"`
+	SkipQueue    bool                       `json:"skip_queue,omitempty"`
+}
+
+type CreateBulkTransactionResponse struct {
+	BatchID          string `json:"batch_id"`
+	Status           string `json:"status"`
+	TransactionCount int    `json:"transaction_count,omitempty"`
+	Message          string `json:"message,omitempty"`
+}
+
 func (s *TransactionService) Create(body CreateTransactionRequest) (*Transaction, *http.Response, error) {
 	//validate the trannsaction
 	if err := ValidateCreateTransacation(body); err != nil {
@@ -73,6 +88,25 @@ func (s *TransactionService) Create(body CreateTransactionRequest) (*Transaction
 	}
 
 	return transaction, resp, nil
+}
+
+func (s *TransactionService) CreateBulk(body CreateBulkTransactionRequest) (*CreateBulkTransactionResponse, *http.Response, error) {
+	if err := ValidateCreateBulkTransaction(body); err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest("transactions/bulk", http.MethodPost, body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	response := new(CreateBulkTransactionResponse)
+	resp, err := s.client.CallWithRetry(req, response)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return response, resp, nil
 }
 
 func (s *TransactionService) Update(transactionID string, body UpdateStatus) (*Transaction, *http.Response, error) {
