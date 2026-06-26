@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Blnk Go SDK — Local Core Tests",
-    "description": "Click **Run** on this collection to verify Go SDK issues against local Blnk Core 0.14.5.\n\n**Setup:** import `go-sdk-local-core.postman_environment.json` and select it.\n\n**Folders:**\n- Issue #40 — Transaction.RecoverQueue\n- Issue #70 — Transaction.Refund skip_queue\n- Issue #73 — Search identities resource type\n- Issue #36 — Transaction.GetLineage\n\nVariables are chained automatically between requests (where needed).",
+    "description": "Click **Run** on this collection to verify Go SDK issues against local Blnk Core 0.14.5.\n\n**Setup:** import `go-sdk-local-core.postman_environment.json` and select it.\n\n**Folders:**\n- Issue #40 — Transaction.RecoverQueue\n- Issue #70 — Transaction.Refund skip_queue\n- Issue #71 — precise_distribution split legs\n- Issue #73 — Search identities resource type\n- Issue #36 — Transaction.GetLineage\n\nVariables are chained automatically between requests (where needed).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -31,6 +31,18 @@
     },
     {
       "key": "transaction_id",
+      "value": ""
+    },
+    {
+      "key": "issue71_merchant_id",
+      "value": ""
+    },
+    {
+      "key": "issue71_fee_id",
+      "value": ""
+    },
+    {
+      "key": "issue71_balance_c",
       "value": ""
     }
   ],
@@ -253,6 +265,277 @@
             },
             "url": "{{blnk_base_url}}/refund-transaction/{{refund_sync_source_txn_id}}",
             "description": "Go SDK: Transaction.Refund(id, &RefundTransactionRequest{SkipQueue: true})"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issue #71 — precise_distribution split legs",
+      "item": [
+        {
+          "name": "1. Create ledger",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('ledger_id', json.ledger_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Go SDK Issue71 Precise Distribution\"\n}"
+            },
+            "url": "{{blnk_base_url}}/ledgers"
+          }
+        },
+        {
+          "name": "2. Create merchant balance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('issue71_merchant_id', json.balance_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ledger_id\": \"{{ledger_id}}\",\n  \"currency\": \"USD\"\n}"
+            },
+            "url": "{{blnk_base_url}}/balances"
+          }
+        },
+        {
+          "name": "3. Create fee balance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('issue71_fee_id', json.balance_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ledger_id\": \"{{ledger_id}}\",\n  \"currency\": \"USD\"\n}"
+            },
+            "url": "{{blnk_base_url}}/balances"
+          }
+        },
+        {
+          "name": "4. Create split txn (precise_distribution legs)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('issue71_ref', `issue71-precise-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('transaction_id returned', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.transaction_id).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"precise_amount\": 10000,\n  \"reference\": \"{{issue71_ref}}\",\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"source\": \"@FundingPool\",\n  \"skip_queue\": true,\n  \"allow_overdraft\": true,\n  \"description\": \"Issue 71 precise_distribution legs\",\n  \"destinations\": [\n    {\"identifier\": \"{{issue71_merchant_id}}\", \"precise_distribution\": \"9733\"},\n    {\"identifier\": \"{{issue71_fee_id}}\", \"precise_distribution\": \"267\"}\n  ]\n}"
+            },
+            "url": "{{blnk_base_url}}/transactions",
+            "description": "Go SDK: Source.PreciseDistribution with precise_amount (9733 + 267 = 10000 minor units)"
+          }
+        },
+        {
+          "name": "4b. Verify merchant credit (9733)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('merchant credit equals precise_distribution leg', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.credit_balance)).to.eql('9733');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" }
+            ],
+            "url": "{{blnk_base_url}}/balances/{{issue71_merchant_id}}"
+          }
+        },
+        {
+          "name": "4c. Verify fee credit (267)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('fee credit equals precise_distribution leg', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.credit_balance)).to.eql('267');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" }
+            ],
+            "url": "{{blnk_base_url}}/balances/{{issue71_fee_id}}"
+          }
+        },
+        {
+          "name": "5. Create balance C (mixed split)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('issue71_balance_c', json.balance_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ledger_id\": \"{{ledger_id}}\",\n  \"currency\": \"USD\"\n}"
+            },
+            "url": "{{blnk_base_url}}/balances"
+          }
+        },
+        {
+          "name": "6. Create split txn (mixed % + precise_distribution + left)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('issue71_mix_ref', `issue71-mix-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('transaction_id returned', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.transaction_id).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 30000,\n  \"reference\": \"{{issue71_mix_ref}}\",\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"source\": \"@FundingPool\",\n  \"skip_queue\": true,\n  \"allow_overdraft\": true,\n  \"description\": \"Issue 71 mixed split legs\",\n  \"destinations\": [\n    {\"identifier\": \"{{issue71_merchant_id}}\", \"distribution\": \"33.33%\"},\n    {\"identifier\": \"{{issue71_fee_id}}\", \"precise_distribution\": \"5000\"},\n    {\"identifier\": \"{{issue71_balance_c}}\", \"distribution\": \"left\"}\n  ]\n}"
+            },
+            "url": "{{blnk_base_url}}/transactions",
+            "description": "Go SDK: mixed decimal %, precise_distribution, and left on split legs"
           }
         }
       ]
