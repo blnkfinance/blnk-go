@@ -1,31 +1,32 @@
 package blnkgo
 
-import "errors"
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
 
-// validate fields in Idenity based on the type of identity selected
-func ValidateCreateIdentity(identity Identity) error {
-	if identity.IdentityType == Individual {
-		if identity.FirstName == "" {
-			return errors.New("FirstName is required for Individual")
-		}
-		if identity.LastName == "" {
-			return errors.New("LastName is required for Individual")
-		}
-		if identity.DOB == nil {
-			return errors.New("DateOfBirth is required for Individual")
-		}
-		if identity.Gender == "" {
-			return errors.New("gender is required for Individual")
-		}
-		if identity.Nationality == "" {
-			return errors.New("nationality is required for Individual")
-		}
-	} else if identity.IdentityType == Organization {
-		if identity.OrganizationName == "" {
-			return errors.New("organizationName is required for Organization")
-		}
-	} else {
-		return errors.New("invalid IdentityType")
+var identityIDUUIDSuffix = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+func validateIdentityID(id string) error {
+	if id == "" {
+		return nil
+	}
+	if !strings.HasPrefix(id, "idt_") {
+		return fmt.Errorf("identity_id must start with the 'idt_' prefix")
+	}
+	suffix := strings.TrimPrefix(id, "idt_")
+	if !identityIDUUIDSuffix.MatchString(suffix) {
+		return fmt.Errorf("identity_id suffix after 'idt_' must be a valid UUID")
 	}
 	return nil
+}
+
+// ValidateCreateIdentity performs client-side checks before POST /identities.
+// Field requirements match the Blnk API: optional fields are not enforced here.
+func ValidateCreateIdentity(identity Identity) error {
+	if identity.IdentityType != "" && identity.IdentityType != Individual && identity.IdentityType != Organization {
+		return fmt.Errorf("invalid identity_type: must be individual or organization")
+	}
+	return validateIdentityID(identity.IdentityID)
 }

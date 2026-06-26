@@ -60,7 +60,8 @@ func TestIdentityService_Create(t *testing.T) {
 
 	t.Run("validation error", func(t *testing.T) {
 		invalidIdentity := blnkgo.Identity{
-			EmailAddress: "",
+			IdentityID:   "not-a-valid-id",
+			EmailAddress: "john.doe@example.com",
 			PhoneNumber:  "1234567890",
 		}
 
@@ -68,6 +69,7 @@ func TestIdentityService_Create(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, resp)
 		assert.Nil(t, httpResp)
+		assert.Contains(t, err.Error(), "idt_")
 	})
 }
 
@@ -264,6 +266,31 @@ func TestIdentityService_Update_Successful(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
+func TestIdentityService_Update_ClearsFieldsWithEmptyStrings(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+	identityId := "idt_12345"
+
+	updateIdentity := &blnkgo.Identity{
+		FirstName:    "Jane",
+		EmailAddress: "",
+		PhoneNumber:  "",
+		Category:     "",
+		Street:       "",
+		Country:      "",
+		State:        "",
+		PostCode:     "",
+		City:         "",
+	}
+
+	mockClient.On("NewRequest", fmt.Sprintf("identities/%s", identityId), http.MethodPut, updateIdentity).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{}, nil)
+
+	_, httpResp, err := svc.Update(identityId, updateIdentity)
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}
+
 func TestIdentityService_Update_NotFound(t *testing.T) {
 	mockClient, svc := setupIdentityService()
 	identityId := "12345"
@@ -304,11 +331,38 @@ func TestIdentityService_Update_ServerError(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 func TestIdentityService_Create_EmptyPayload(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	emptyIdentity := blnkgo.Identity{
+		FirstName:    "Minimal",
+		EmailAddress: "minimal@example.com",
+		Category:     "customer",
+	}
+	expectedResponse := &blnkgo.IdentityResponse{
+		IdentityId: "idt_minimal",
+		Identity:   emptyIdentity,
+	}
+
+	mockClient.On("NewRequest", "identities", http.MethodPost, emptyIdentity).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.IdentityResponse)
+		*resp = *expectedResponse
+	}).Return(&http.Response{}, nil)
+
+	resp, httpResp, err := svc.Create(emptyIdentity)
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, expectedResponse, resp)
+	mockClient.AssertExpectations(t)
+}
+
+func TestIdentityService_Create_InvalidIdentityType(t *testing.T) {
 	_, svc := setupIdentityService()
 
-	emptyIdentity := blnkgo.Identity{}
-	resp, httpResp, err := svc.Create(emptyIdentity)
-
+	resp, httpResp, err := svc.Create(blnkgo.Identity{
+		IdentityType: blnkgo.IdentityType("invalid"),
+		FirstName:    "Jane",
+	})
 	assert.Error(t, err)
 	assert.Nil(t, resp)
 	assert.Nil(t, httpResp)

@@ -624,6 +624,21 @@ if err != nil {
 fmt.Printf("Identity Created: %+v\n", identity)
 ```
 
+To supply a deterministic `identity_id` (must be `idt_` + UUID), set it on the request body:
+
+```go
+identityBody := blnkgo.Identity{
+    IdentityID:   "idt_8c5a8e2f-3f1d-5a9b-9c3e-4d8f1e5a7b2c",
+    IdentityType: blnkgo.Individual,
+    FirstName:    "John",
+    Category:     "customer",
+}
+
+identity, resp, err := client.Identity.Create(identityBody)
+```
+
+Only `identity_type` (when set) and `identity_id` format are validated client-side; other fields are optional per the API reference.
+
 ### Reconciliation
 
 The reconciliation feature allows you to match and verify transactions against external data sources.
