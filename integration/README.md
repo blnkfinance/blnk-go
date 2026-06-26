@@ -22,6 +22,7 @@ go test -tags=integration -v ./integration/... -run Issue73
 go test -tags=integration -v ./integration/... -run Issue72
 go test -tags=integration -v ./integration/... -run Issue55
 go test -tags=integration -v ./integration/... -run Issue41
+go test -tags=integration -v ./integration/... -run Issue42
 go test -tags=integration -v ./integration/... -run Issue36
 
 # all integration tests
@@ -49,6 +50,7 @@ go test -tags=integration -v ./integration/...
 | #72 identity optional id | 0.14.x+ | Caller-supplied identity_id on POST /identities |
 | #55 identity filter | 0.14.x+ | POST /identities/filter |
 | #41 instant reconciliation | 0.14.x+ | POST /reconciliation/start-instant |
+| #42 get reconciliation | 0.14.x+ | GET /reconciliation/{reconciliation_id} |
 | #36 transaction lineage | 0.14.x+ | Not 0.15-only |
 | 0.15-only features (delete identity, hooks, api-keys, etc.) | 0.15.0 | Test when we reach Go 1.3.0 issues |
 

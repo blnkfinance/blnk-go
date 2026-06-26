@@ -756,6 +756,20 @@ instantResp, resp, err := client.Reconciliation.RunInstant(blnkgo.RunInstantReco
 // instantResp.ReconciliationID — poll GET /reconciliation/{id} for status
 ```
 
+#### Get Reconciliation
+
+Poll reconciliation status and match counts after starting a run.
+
+```go
+recon, resp, err := client.Reconciliation.Get(instantResp.ReconciliationID)
+if err != nil {
+    panic(err)
+}
+fmt.Println("Status:", recon.Status)
+fmt.Println("Matched:", recon.MatchedTransactions)
+fmt.Println("Unmatched:", recon.UnmatchedTransactions)
+```
+
 ### Search
 
 Search across ledgers, balances, and transactions with flexible query parameters.
