@@ -44,13 +44,13 @@ func TestIssue71_PreciseDistributionLegs(t *testing.T) {
 
 	txn, resp, err := client.Transaction.Create(blnkgo.CreateTransactionRequest{
 		ParentTransaction: blnkgo.ParentTransaction{
-			Amount:      10000,
-			Reference:   "issue71-precise-" + suffix,
-			Precision:   100,
-			Currency:    "USD",
-			Source:      "@FundingPool",
-			Description: "Issue 71 precise_distribution legs",
-			SkipQueue:   true,
+			PreciseAmount: big.NewInt(10000),
+			Reference:     "issue71-precise-" + suffix,
+			Precision:     100,
+			Currency:      "USD",
+			Source:        "@FundingPool",
+			Description:   "Issue 71 precise_distribution legs",
+			SkipQueue:     true,
 			Destinations: []blnkgo.Source{
 				{Identifier: merchant.BalanceID, PreciseDistribution: "9733"},
 				{Identifier: fee.BalanceID, PreciseDistribution: "267"},
@@ -61,6 +61,20 @@ func TestIssue71_PreciseDistributionLegs(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
 	require.NotEmpty(t, txn.TransactionID)
+
+	merchantAfter, resp, err := client.LedgerBalance.Get(merchant.BalanceID)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NotNil(t, merchantAfter.CreditBalance)
+	require.Equal(t, 0, big.NewInt(9733).Cmp(merchantAfter.CreditBalance),
+		"merchant credit should equal precise_distribution leg amount")
+
+	feeAfter, resp, err := client.LedgerBalance.Get(fee.BalanceID)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NotNil(t, feeAfter.CreditBalance)
+	require.Equal(t, 0, big.NewInt(267).Cmp(feeAfter.CreditBalance),
+		"fee credit should equal precise_distribution leg amount")
 }
 
 func TestIssue71_MixedDecimalPreciseDistributionAndLeft(t *testing.T) {

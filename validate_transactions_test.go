@@ -105,6 +105,31 @@ func TestValidateCreateTransaction_LargePreciseDistributionExactSum(t *testing.T
 	require.Error(t, err)
 }
 
+func TestValidateCreateTransaction_NonIntegerAmountWithPreciseDistributionRejected(t *testing.T) {
+	txn := baseSplitTxn()
+	txn.Amount = 10000.50
+	txn.Destinations = []blnkgo.Source{
+		{Identifier: "bln_merchant", PreciseDistribution: "9733"},
+		{Identifier: "bln_fee", PreciseDistribution: "267"},
+	}
+	err := blnkgo.ValidateCreateTransacation(txn)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "whole number")
+}
+
+func TestValidateCreateTransaction_NonIntegerAmountTruncationWouldMismatch(t *testing.T) {
+	// 10000.99 truncates to 10000, which would incorrectly pass a 10001 split sum.
+	txn := baseSplitTxn()
+	txn.Amount = 10000.99
+	txn.Destinations = []blnkgo.Source{
+		{Identifier: "bln_merchant", PreciseDistribution: "9733"},
+		{Identifier: "bln_fee", PreciseDistribution: "268"},
+	}
+	err := blnkgo.ValidateCreateTransacation(txn)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "whole number")
+}
+
 func TestValidateCreateTransaction_ClassicDistributionStillWorks(t *testing.T) {
 	txn := baseSplitTxn()
 	txn.Amount = 1000

@@ -402,10 +402,66 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"amount\": 10000,\n  \"reference\": \"{{issue71_ref}}\",\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"source\": \"@FundingPool\",\n  \"skip_queue\": true,\n  \"allow_overdraft\": true,\n  \"description\": \"Issue 71 precise_distribution legs\",\n  \"destinations\": [\n    {\"identifier\": \"{{issue71_merchant_id}}\", \"precise_distribution\": \"9733\"},\n    {\"identifier\": \"{{issue71_fee_id}}\", \"precise_distribution\": \"267\"}\n  ]\n}"
+              "raw": "{\n  \"precise_amount\": 10000,\n  \"reference\": \"{{issue71_ref}}\",\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"source\": \"@FundingPool\",\n  \"skip_queue\": true,\n  \"allow_overdraft\": true,\n  \"description\": \"Issue 71 precise_distribution legs\",\n  \"destinations\": [\n    {\"identifier\": \"{{issue71_merchant_id}}\", \"precise_distribution\": \"9733\"},\n    {\"identifier\": \"{{issue71_fee_id}}\", \"precise_distribution\": \"267\"}\n  ]\n}"
             },
             "url": "{{blnk_base_url}}/transactions",
-            "description": "Go SDK: Source.PreciseDistribution on split legs (9733 + 267 = 10000)"
+            "description": "Go SDK: Source.PreciseDistribution with precise_amount (9733 + 267 = 10000 minor units)"
+          }
+        },
+        {
+          "name": "4b. Verify merchant credit (9733)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('merchant credit equals precise_distribution leg', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.credit_balance)).to.eql('9733');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" }
+            ],
+            "url": "{{blnk_base_url}}/balances/{{issue71_merchant_id}}"
+          }
+        },
+        {
+          "name": "4c. Verify fee credit (267)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('fee credit equals precise_distribution leg', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.credit_balance)).to.eql('267');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" }
+            ],
+            "url": "{{blnk_base_url}}/balances/{{issue71_fee_id}}"
           }
         },
         {

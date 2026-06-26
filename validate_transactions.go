@@ -183,6 +183,9 @@ func resolveSplitLegTotal(t CreateTransactionRequest) (splitLegTotal, error) {
 
 	if usesPreciseIntegerArithmetic(t) {
 		if t.Amount != 0 {
+			if t.Amount != math.Trunc(t.Amount) {
+				return zero, errors.New("validation error: amount must be a whole number when split legs use precise_distribution")
+			}
 			return splitLegTotal{bigInt: big.NewInt(int64(t.Amount)), mode: "bigint"}, nil
 		}
 		if hasPreciseAmount {
