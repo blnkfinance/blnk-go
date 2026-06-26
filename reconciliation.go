@@ -99,6 +99,25 @@ func (s *ReconciliationService) CreateMatchingRule(matcher Matcher) (*RunReconRe
 	return reconResp, resp, nil
 }
 
+func (s *ReconciliationService) UpdateMatchingRule(ruleID string, matcher Matcher) (*RunReconResp, *http.Response, error) {
+	if ruleID == "" {
+		return nil, nil, fmt.Errorf("matching rule id is required")
+	}
+
+	req, err := s.client.NewRequest(fmt.Sprintf("reconciliation/matching-rules/%s", ruleID), http.MethodPut, matcher)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	reconResp := new(RunReconResp)
+	resp, err := s.client.CallWithRetry(req, reconResp)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return reconResp, resp, nil
+}
+
 func (s *ReconciliationService) RunInstant(data RunInstantReconData) (*RunInstantReconResp, *http.Response, error) {
 	if err := ValidateRunInstantReconData(data); err != nil {
 		return nil, nil, err

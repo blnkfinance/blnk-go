@@ -718,6 +718,21 @@ matcherBody := blnkgo.Matcher{
 matchingRule, resp, err := client.Reconciliation.CreateMatchingRule(matcherBody)
 ```
 
+#### Update Matching Rule
+
+```go
+updatedRule, resp, err := client.Reconciliation.UpdateMatchingRule(matchingRule.RuleID, blnkgo.Matcher{
+    Name:        "Updated Amount Match",
+    Description: "Updated match by amount only",
+    Criteria: []blnkgo.Criteria{
+        {
+            Field:    blnkgo.CriteriaFieldAmount,
+            Operator: blnkgo.ReconciliationOperatorEquals,
+        },
+    },
+})
+```
+
 #### Run Reconciliation
 
 ```go

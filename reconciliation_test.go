@@ -466,3 +466,86 @@ func TestReconciliationService_Get_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, httpResp.StatusCode)
 	mockClient.AssertExpectations(t)
 }
+
+func TestReconciliationService_UpdateMatchingRule_Success(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	ruleID := "rule_abc123"
+	matcher := blnkgo.Matcher{
+		Name:        "Updated Rule",
+		Description: "Updated description",
+		Criteria: []blnkgo.Criteria{
+			{
+				Field:    blnkgo.CriteriaFieldAmount,
+				Operator: blnkgo.ReconciliationOperatorEquals,
+			},
+		},
+	}
+	expected := &blnkgo.RunReconResp{
+		Matcher:   matcher,
+		RuleID:    ruleID,
+		CreatedAt: time.Now().Format(time.RFC3339),
+		UpdatedAt: time.Now().Format(time.RFC3339),
+	}
+
+	mockClient.On("NewRequest", fmt.Sprintf("reconciliation/matching-rules/%s", ruleID), http.MethodPut, matcher).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.RunReconResp)
+		*resp = *expected
+	})
+
+	result, httpResp, err := svc.UpdateMatchingRule(ruleID, matcher)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Equal(t, expected, result)
+	mockClient.AssertExpectations(t)
+}
+
+func TestReconciliationService_UpdateMatchingRule_EmptyID(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	result, httpResp, err := svc.UpdateMatchingRule("", blnkgo.Matcher{Name: "x"})
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Nil(t, httpResp)
+	assert.Contains(t, err.Error(), "matching rule id is required")
+	mockClient.AssertExpectations(t)
+}
+
+func TestReconciliationService_UpdateMatchingRule_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	ruleID := "rule_abc123"
+	matcher := blnkgo.Matcher{Name: "Updated Rule"}
+
+	mockClient.On("NewRequest", fmt.Sprintf("reconciliation/matching-rules/%s", ruleID), http.MethodPut, matcher).Return(nil, errors.New("failed to create request"))
+
+	result, httpResp, err := svc.UpdateMatchingRule(ruleID, matcher)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Nil(t, httpResp)
+	assert.Contains(t, err.Error(), "failed to create request")
+	mockClient.AssertExpectations(t)
+}
+
+func TestReconciliationService_UpdateMatchingRule_NotFound(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	ruleID := "rule_missing"
+	matcher := blnkgo.Matcher{Name: "Updated Rule"}
+
+	mockClient.On("NewRequest", fmt.Sprintf("reconciliation/matching-rules/%s", ruleID), http.MethodPut, matcher).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusNotFound}, errors.New("not found"))
+
+	result, httpResp, err := svc.UpdateMatchingRule(ruleID, matcher)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusNotFound, httpResp.StatusCode)
+	mockClient.AssertExpectations(t)
+}
