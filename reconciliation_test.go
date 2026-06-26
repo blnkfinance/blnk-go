@@ -549,3 +549,69 @@ func TestReconciliationService_UpdateMatchingRule_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, httpResp.StatusCode)
 	mockClient.AssertExpectations(t)
 }
+
+func TestReconciliationService_DeleteMatchingRule_Success(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	ruleID := "rule_abc123"
+	expected := &blnkgo.DeleteMatchingRuleResp{
+		Message: "Matching rule deleted successfully",
+	}
+
+	mockClient.On("NewRequest", fmt.Sprintf("reconciliation/matching-rules/%s", ruleID), http.MethodDelete, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.DeleteMatchingRuleResp)
+		*resp = *expected
+	})
+
+	result, httpResp, err := svc.DeleteMatchingRule(ruleID)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Equal(t, expected, result)
+	mockClient.AssertExpectations(t)
+}
+
+func TestReconciliationService_DeleteMatchingRule_EmptyID(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	result, httpResp, err := svc.DeleteMatchingRule("")
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Nil(t, httpResp)
+	assert.Contains(t, err.Error(), "matching rule id is required")
+	mockClient.AssertExpectations(t)
+}
+
+func TestReconciliationService_DeleteMatchingRule_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	ruleID := "rule_abc123"
+	mockClient.On("NewRequest", fmt.Sprintf("reconciliation/matching-rules/%s", ruleID), http.MethodDelete, nil).Return(nil, errors.New("failed to create request"))
+
+	result, httpResp, err := svc.DeleteMatchingRule(ruleID)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Nil(t, httpResp)
+	assert.Contains(t, err.Error(), "failed to create request")
+	mockClient.AssertExpectations(t)
+}
+
+func TestReconciliationService_DeleteMatchingRule_NotFound(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	ruleID := "rule_missing"
+	mockClient.On("NewRequest", fmt.Sprintf("reconciliation/matching-rules/%s", ruleID), http.MethodDelete, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusNotFound}, errors.New("not found"))
+
+	result, httpResp, err := svc.DeleteMatchingRule(ruleID)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusNotFound, httpResp.StatusCode)
+	mockClient.AssertExpectations(t)
+}

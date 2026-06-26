@@ -24,6 +24,7 @@ go test -tags=integration -v ./integration/... -run Issue55
 go test -tags=integration -v ./integration/... -run Issue41
 go test -tags=integration -v ./integration/... -run Issue42
 go test -tags=integration -v ./integration/... -run Issue43
+go test -tags=integration -v ./integration/... -run Issue44
 go test -tags=integration -v ./integration/... -run Issue36
 
 # all integration tests
@@ -53,6 +54,7 @@ go test -tags=integration -v ./integration/...
 | #41 instant reconciliation | 0.14.x+ | POST /reconciliation/start-instant |
 | #42 get reconciliation | 0.14.x+ | GET /reconciliation/{reconciliation_id} |
 | #43 update matching rule | 0.14.x+ | PUT /reconciliation/matching-rules/{rule_id} |
+| #44 delete matching rule | 0.14.x+ | DELETE /reconciliation/matching-rules/{rule_id} |
 | #36 transaction lineage | 0.14.x+ | Not 0.15-only |
 | 0.15-only features (delete identity, hooks, api-keys, etc.) | 0.15.0 | Test when we reach Go 1.3.0 issues |
 
