@@ -80,6 +80,34 @@ func TestSearchService_SearchDocument_Success(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
+func TestSearchService_SearchDocument_IdentitiesResource(t *testing.T) {
+	mockClient, svc := setupSearchService()
+
+	body := blnkgo.SearchParams{
+		Q:       "john.doe@example.com",
+		QueryBy: "email_address",
+		Page:    1,
+		PerPage: 10,
+	}
+
+	mockClient.On("NewRequest", "search/identities", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusOK,
+	}, nil).Run(func(args mock.Arguments) {
+		searchResponse := args.Get(1).(*blnkgo.SearchResponse)
+		*searchResponse = blnkgo.SearchResponse{Found: 1, Page: 1}
+	})
+
+	searchResponse, resp, err := svc.SearchDocument(body, blnkgo.Identities)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, searchResponse)
+	assert.Equal(t, 1, searchResponse.Found)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	mockClient.AssertExpectations(t)
+}
+
 func TestSearchService_SearchDocument_EmptyRequest(t *testing.T) {
 	mockClient, svc := setupSearchService()
 	body := blnkgo.SearchParams{}

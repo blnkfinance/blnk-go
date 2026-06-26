@@ -9,7 +9,6 @@ package integration
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"testing"
 	"time"
 
@@ -18,10 +17,7 @@ import (
 )
 
 func newClientIssue37(t *testing.T) *blnkgo.Client {
-	t.Helper()
-	u, err := url.Parse("http://localhost:5001/")
-	require.NoError(t, err)
-	return blnkgo.NewClient(u, nil, blnkgo.WithTimeout(15*time.Second), blnkgo.WithRetry(2))
+	return newIntegrationClient(t)
 }
 
 func TestIssue37_GetTransactionByReference(t *testing.T) {
