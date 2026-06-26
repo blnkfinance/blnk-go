@@ -17,7 +17,7 @@ func validRunInstantReconData() blnkgo.RunInstantReconData {
 				Reference:   "INV-2023-002",
 				Currency:    "GBP",
 				Description: "Card payment",
-				Date:        time.Date(2024, 11, 15, 14, 25, 30, 0, time.UTC),
+				Date:        func() *time.Time { t := time.Date(2024, 11, 15, 14, 25, 30, 0, time.UTC); return &t }(),
 				Source:      "bank-api",
 			},
 		},

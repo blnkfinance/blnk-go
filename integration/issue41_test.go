@@ -40,6 +40,7 @@ func TestIssue41_RunInstant_DryRun(t *testing.T) {
 	ruleID := createInstantReconMatchingRule(t, client)
 
 	extID := fmt.Sprintf("ext-%d", time.Now().UnixNano())
+	txnDate := time.Now().UTC().Truncate(time.Second)
 	result, resp, err := client.Reconciliation.RunInstant(blnkgo.RunInstantReconData{
 		ExternalTransactions: []blnkgo.ExternalTransaction{
 			{
@@ -48,7 +49,7 @@ func TestIssue41_RunInstant_DryRun(t *testing.T) {
 				Reference:   "INV-41",
 				Currency:    "USD",
 				Description: "Instant recon test",
-				Date:        time.Now().UTC().Truncate(time.Second),
+				Date:        &txnDate,
 				Source:      "integration-test",
 			},
 		},

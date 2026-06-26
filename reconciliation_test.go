@@ -1,6 +1,7 @@
 package blnkgo_test
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
@@ -10,6 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+func timePtr(t time.Time) *time.Time {
+	return &t
+}
 
 func setupReconciliationService() (*MockClient, *blnkgo.ReconciliationService) {
 	mockClient := &MockClient{}
@@ -258,7 +263,7 @@ func TestReconciliationService_RunInstant_Success(t *testing.T) {
 				Reference:   "REF-1",
 				Currency:    "USD",
 				Description: "Test payment",
-				Date:        time.Date(2024, 11, 15, 14, 25, 30, 0, time.UTC),
+				Date:        timePtr(time.Date(2024, 11, 15, 14, 25, 30, 0, time.UTC)),
 				Source:      "bank-api",
 			},
 		},
@@ -315,7 +320,7 @@ func TestReconciliationService_RunInstant_RequestCreationFailure(t *testing.T) {
 				Reference:   "REF-1",
 				Currency:    "USD",
 				Description: "Test payment",
-				Date:        time.Date(2024, 11, 15, 14, 25, 30, 0, time.UTC),
+				Date:        timePtr(time.Date(2024, 11, 15, 14, 25, 30, 0, time.UTC)),
 				Source:      "bank-api",
 			},
 		},
@@ -345,7 +350,7 @@ func TestReconciliationService_RunInstant_ServerError(t *testing.T) {
 				Reference:   "REF-1",
 				Currency:    "USD",
 				Description: "Test payment",
-				Date:        time.Date(2024, 11, 15, 14, 25, 30, 0, time.UTC),
+				Date:        timePtr(time.Date(2024, 11, 15, 14, 25, 30, 0, time.UTC)),
 				Source:      "bank-api",
 			},
 		},
@@ -364,4 +369,26 @@ func TestReconciliationService_RunInstant_ServerError(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, httpResp.StatusCode)
 	assert.Contains(t, err.Error(), "server error")
 	mockClient.AssertExpectations(t)
+}
+
+func TestRunInstantReconData_MinimalJSONOmitsOptionalFields(t *testing.T) {
+	data := blnkgo.RunInstantReconData{
+		ExternalTransactions: []blnkgo.ExternalTransaction{
+			{ID: "ext-1", Amount: 1, Reference: "r1", Currency: "USD"},
+		},
+		Strategy:        blnkgo.ReconciliationStrategyOneToOne,
+		MatchingRuleIDs: []string{"rule_1"},
+	}
+
+	body, err := json.Marshal(data)
+	assert.NoError(t, err)
+
+	encoded := string(body)
+	assert.NotContains(t, encoded, `"date"`)
+	assert.NotContains(t, encoded, `"description"`)
+	assert.NotContains(t, encoded, `"source"`)
+	assert.Contains(t, encoded, `"id":"ext-1"`)
+	assert.Contains(t, encoded, `"amount":1`)
+	assert.Contains(t, encoded, `"reference":"r1"`)
+	assert.Contains(t, encoded, `"currency":"USD"`)
 }

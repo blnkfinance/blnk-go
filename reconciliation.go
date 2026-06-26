@@ -44,14 +44,15 @@ type RunReconResp struct {
 }
 
 // ExternalTransaction is a single row of external data for instant reconciliation.
+// Description, Date, and Source are optional at the Core HTTP layer; omit them when unset.
 type ExternalTransaction struct {
 	ID          string    `json:"id"`
 	Amount      float64   `json:"amount"`
 	Reference   string    `json:"reference"`
 	Currency    string    `json:"currency"`
-	Description string    `json:"description"`
-	Date        time.Time `json:"date"`
-	Source      string    `json:"source"`
+	Description string     `json:"description,omitempty"`
+	Date        *time.Time `json:"date,omitempty"`
+	Source      string     `json:"source,omitempty"`
 }
 
 // RunInstantReconData is the request body for POST /reconciliation/start-instant.
