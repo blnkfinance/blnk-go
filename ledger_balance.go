@@ -29,16 +29,25 @@ type LedgerBalance struct {
 	CreatedAt             time.Time              `json:"created_at"`
 	InflightExpiresAt     time.Time              `json:"inflight_expires_at"`
 	MetaData              map[string]interface{} `json:"meta_data,omitempty"`
+	TrackFundLineage      bool                   `json:"track_fund_lineage,omitempty"`
+	AllocationStrategy    AllocationStrategy     `json:"allocation_strategy,omitempty"`
 }
 
 type CreateLedgerBalanceRequest struct {
-	LedgerID   string                 `json:"ledger_id"`
-	IdentityID string                 `json:"identity_id,omitempty"`
-	Currency   string                 `json:"currency"`
-	MetaData   map[string]interface{} `json:"meta_data,omitempty"`
+	LedgerID           string                 `json:"ledger_id"`
+	IdentityID         string                 `json:"identity_id,omitempty"`
+	Currency           string                 `json:"currency"`
+	TrackFundLineage   bool                   `json:"track_fund_lineage,omitempty"`
+	AllocationStrategy AllocationStrategy     `json:"allocation_strategy,omitempty"`
+	MetaData           map[string]interface{} `json:"meta_data,omitempty"`
 }
 
 func (s *LedgerBalanceService) Create(body CreateLedgerBalanceRequest) (*LedgerBalance, *http.Response, error) {
+	body.AllocationStrategy = normalizeAllocationStrategy(body.AllocationStrategy)
+	if err := ValidateCreateLedgerBalance(body); err != nil {
+		return nil, nil, err
+	}
+
 	req, err := s.client.NewRequest("balances", http.MethodPost, body)
 	if err != nil {
 		return nil, nil, err
