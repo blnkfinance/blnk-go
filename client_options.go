@@ -16,6 +16,12 @@ func WithRetry(count int) ClientOption {
 	}
 }
 
+func WithRetryDelay(delay time.Duration) ClientOption {
+	return func(c *Client) {
+		c.options.RetryDelay = delay
+	}
+}
+
 func WithTimeout(timeout time.Duration) ClientOption {
 	return func(c *Client) {
 		c.options.Timeout = timeout
