@@ -11,9 +11,10 @@ import (
 type TransactionService service
 
 type Source struct {
-	Identifier   string       `json:"identifier"`
-	Distribution Distribution `json:"distribution"`
-	Narration    string       `json:"narration,omitempty"`
+	Identifier          string       `json:"identifier"`
+	Distribution        Distribution `json:"distribution,omitempty"`
+	PreciseDistribution string       `json:"precise_distribution,omitempty"`
+	Narration           string       `json:"narration,omitempty"`
 }
 
 type ParentTransaction struct {
