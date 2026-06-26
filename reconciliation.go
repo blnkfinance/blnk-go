@@ -1,6 +1,7 @@
 package blnkgo
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -69,6 +70,18 @@ type RunInstantReconResp struct {
 	ReconciliationID string `json:"reconciliation_id"`
 }
 
+// Reconciliation is the status and counts for a reconciliation run.
+type Reconciliation struct {
+	ReconciliationID      string     `json:"reconciliation_id"`
+	UploadID              string     `json:"upload_id"`
+	Status                string     `json:"status"`
+	MatchedTransactions   int        `json:"matched_transactions"`
+	UnmatchedTransactions int        `json:"unmatched_transactions"`
+	IsDryRun              bool       `json:"is_dry_run"`
+	StartedAt             time.Time  `json:"started_at"`
+	CompletedAt           *time.Time `json:"completed_at"`
+}
+
 const MaxInstantReconciliationItems = 10000
 
 func (s *ReconciliationService) CreateMatchingRule(matcher Matcher) (*RunReconResp, *http.Response, error) {
@@ -103,6 +116,25 @@ func (s *ReconciliationService) RunInstant(data RunInstantReconData) (*RunInstan
 	}
 
 	return reconResp, resp, nil
+}
+
+func (s *ReconciliationService) Get(reconciliationID string) (*Reconciliation, *http.Response, error) {
+	if reconciliationID == "" {
+		return nil, nil, fmt.Errorf("reconciliation id is required")
+	}
+
+	req, err := s.client.NewRequest(fmt.Sprintf("reconciliation/%s", reconciliationID), http.MethodGet, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	recon := new(Reconciliation)
+	resp, err := s.client.CallWithRetry(req, recon)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return recon, resp, nil
 }
 
 func (s *ReconciliationService) Run(data RunReconData) (*RunReconResp, *http.Response, error) {

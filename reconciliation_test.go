@@ -3,6 +3,7 @@ package blnkgo_test
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -391,4 +392,77 @@ func TestRunInstantReconData_MinimalJSONOmitsOptionalFields(t *testing.T) {
 	assert.Contains(t, encoded, `"amount":1`)
 	assert.Contains(t, encoded, `"reference":"r1"`)
 	assert.Contains(t, encoded, `"currency":"USD"`)
+}
+
+func TestReconciliationService_Get_Success(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	reconID := "recon_abc123"
+	startedAt := time.Date(2025, 3, 15, 17, 43, 26, 0, time.UTC)
+	expected := &blnkgo.Reconciliation{
+		ReconciliationID:      reconID,
+		UploadID:              "instant_xyz",
+		Status:                "completed",
+		MatchedTransactions:   3,
+		UnmatchedTransactions: 0,
+		IsDryRun:              true,
+		StartedAt:             startedAt,
+	}
+
+	mockClient.On("NewRequest", fmt.Sprintf("reconciliation/%s", reconID), http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		recon := args.Get(1).(*blnkgo.Reconciliation)
+		*recon = *expected
+	})
+
+	recon, httpResp, err := svc.Get(reconID)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Equal(t, expected, recon)
+	mockClient.AssertExpectations(t)
+}
+
+func TestReconciliationService_Get_EmptyID(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	recon, httpResp, err := svc.Get("")
+
+	assert.Error(t, err)
+	assert.Nil(t, recon)
+	assert.Nil(t, httpResp)
+	assert.Contains(t, err.Error(), "reconciliation id is required")
+	mockClient.AssertExpectations(t)
+}
+
+func TestReconciliationService_Get_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	reconID := "recon_abc123"
+	mockClient.On("NewRequest", fmt.Sprintf("reconciliation/%s", reconID), http.MethodGet, nil).Return(nil, errors.New("failed to create request"))
+
+	recon, httpResp, err := svc.Get(reconID)
+
+	assert.Error(t, err)
+	assert.Nil(t, recon)
+	assert.Nil(t, httpResp)
+	assert.Contains(t, err.Error(), "failed to create request")
+	mockClient.AssertExpectations(t)
+}
+
+func TestReconciliationService_Get_NotFound(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	reconID := "recon_missing"
+	mockClient.On("NewRequest", fmt.Sprintf("reconciliation/%s", reconID), http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusNotFound}, errors.New("not found"))
+
+	recon, httpResp, err := svc.Get(reconID)
+
+	assert.Error(t, err)
+	assert.Nil(t, recon)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusNotFound, httpResp.StatusCode)
+	mockClient.AssertExpectations(t)
 }
