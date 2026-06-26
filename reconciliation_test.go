@@ -1,6 +1,7 @@
 package blnkgo_test
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
@@ -10,6 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+func timePtr(t time.Time) *time.Time {
+	return &t
+}
 
 func setupReconciliationService() (*MockClient, *blnkgo.ReconciliationService) {
 	mockClient := &MockClient{}
@@ -245,4 +250,145 @@ func TestReconciliationService_Upload_ServerError(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, httpResp.StatusCode)
 	assert.Contains(t, err.Error(), "server error")
 	mockClient.AssertExpectations(t)
+}
+
+func TestReconciliationService_RunInstant_Success(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	data := blnkgo.RunInstantReconData{
+		ExternalTransactions: []blnkgo.ExternalTransaction{
+			{
+				ID:          "ext-1",
+				Amount:      10.5,
+				Reference:   "REF-1",
+				Currency:    "USD",
+				Description: "Test payment",
+				Date:        timePtr(time.Date(2024, 11, 15, 14, 25, 30, 0, time.UTC)),
+				Source:      "bank-api",
+			},
+		},
+		Strategy:        blnkgo.ReconciliationStrategyOneToOne,
+		DryRun:          true,
+		MatchingRuleIDs: []string{"rule-123"},
+	}
+
+	expectedResp := &blnkgo.RunInstantReconResp{
+		ReconciliationID: "recon_abc123",
+	}
+
+	mockClient.On("NewRequest", "reconciliation/start-instant", http.MethodPost, data).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.RunInstantReconResp)
+		*resp = *expectedResp
+	})
+
+	resp, httpResp, err := svc.RunInstant(data)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Equal(t, expectedResp, resp)
+	mockClient.AssertExpectations(t)
+}
+
+func TestReconciliationService_RunInstant_ValidationError(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	data := blnkgo.RunInstantReconData{
+		ExternalTransactions: nil,
+		Strategy:             blnkgo.ReconciliationStrategyOneToOne,
+		MatchingRuleIDs:      []string{"rule-123"},
+	}
+
+	resp, httpResp, err := svc.RunInstant(data)
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	assert.Nil(t, httpResp)
+	assert.Contains(t, err.Error(), "external_transactions must be a non-empty array")
+	mockClient.AssertExpectations(t)
+}
+
+func TestReconciliationService_RunInstant_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	data := blnkgo.RunInstantReconData{
+		ExternalTransactions: []blnkgo.ExternalTransaction{
+			{
+				ID:          "ext-1",
+				Amount:      10.5,
+				Reference:   "REF-1",
+				Currency:    "USD",
+				Description: "Test payment",
+				Date:        timePtr(time.Date(2024, 11, 15, 14, 25, 30, 0, time.UTC)),
+				Source:      "bank-api",
+			},
+		},
+		Strategy:        blnkgo.ReconciliationStrategyOneToOne,
+		MatchingRuleIDs: []string{"rule-123"},
+	}
+
+	mockClient.On("NewRequest", "reconciliation/start-instant", http.MethodPost, data).Return(nil, errors.New("failed to create request"))
+
+	resp, httpResp, err := svc.RunInstant(data)
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	assert.Nil(t, httpResp)
+	assert.Contains(t, err.Error(), "failed to create request")
+	mockClient.AssertExpectations(t)
+}
+
+func TestReconciliationService_RunInstant_ServerError(t *testing.T) {
+	mockClient, svc := setupReconciliationService()
+
+	data := blnkgo.RunInstantReconData{
+		ExternalTransactions: []blnkgo.ExternalTransaction{
+			{
+				ID:          "ext-1",
+				Amount:      10.5,
+				Reference:   "REF-1",
+				Currency:    "USD",
+				Description: "Test payment",
+				Date:        timePtr(time.Date(2024, 11, 15, 14, 25, 30, 0, time.UTC)),
+				Source:      "bank-api",
+			},
+		},
+		Strategy:        blnkgo.ReconciliationStrategyOneToOne,
+		MatchingRuleIDs: []string{"rule-123"},
+	}
+
+	mockClient.On("NewRequest", "reconciliation/start-instant", http.MethodPost, data).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusInternalServerError}, errors.New("server error"))
+
+	resp, httpResp, err := svc.RunInstant(data)
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusInternalServerError, httpResp.StatusCode)
+	assert.Contains(t, err.Error(), "server error")
+	mockClient.AssertExpectations(t)
+}
+
+func TestRunInstantReconData_MinimalJSONOmitsOptionalFields(t *testing.T) {
+	data := blnkgo.RunInstantReconData{
+		ExternalTransactions: []blnkgo.ExternalTransaction{
+			{ID: "ext-1", Amount: 1, Reference: "r1", Currency: "USD"},
+		},
+		Strategy:        blnkgo.ReconciliationStrategyOneToOne,
+		MatchingRuleIDs: []string{"rule_1"},
+	}
+
+	body, err := json.Marshal(data)
+	assert.NoError(t, err)
+
+	encoded := string(body)
+	assert.NotContains(t, encoded, `"date"`)
+	assert.NotContains(t, encoded, `"description"`)
+	assert.NotContains(t, encoded, `"source"`)
+	assert.Contains(t, encoded, `"id":"ext-1"`)
+	assert.Contains(t, encoded, `"amount":1`)
+	assert.Contains(t, encoded, `"reference":"r1"`)
+	assert.Contains(t, encoded, `"currency":"USD"`)
 }

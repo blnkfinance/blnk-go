@@ -729,7 +729,31 @@ reconBody := blnkgo.RunReconData{
     MatchingRuleIDs:  []string{matchingRule.RuleID},
 }
 
-reconResp, resp, err := client.Reconciliation.RunReconciliation(reconBody)
+reconResp, resp, err := client.Reconciliation.Run(reconBody)
+```
+
+#### Run Instant Reconciliation
+
+Reconcile inline external transactions without uploading a file first.
+
+```go
+instantResp, resp, err := client.Reconciliation.RunInstant(blnkgo.RunInstantReconData{
+    ExternalTransactions: []blnkgo.ExternalTransaction{
+        {
+            ID:          "txn1a2b3c4d5e6f7g8h9i0",
+            Amount:      5.49,
+            Reference:   "INV-2023-002",
+            Currency:    "GBP",
+            Description: "Card payment",
+            Date:        func() *time.Time { t := time.Date(2024, 11, 15, 14, 25, 30, 0, time.UTC); return &t }(),
+            Source:      "bank-api",
+        },
+    },
+    Strategy:        blnkgo.ReconciliationStrategyOneToOne,
+    DryRun:          true,
+    MatchingRuleIDs: []string{matchingRule.RuleID},
+})
+// instantResp.ReconciliationID — poll GET /reconciliation/{id} for status
 ```
 
 ### Search
