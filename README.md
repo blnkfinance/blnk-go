@@ -733,6 +733,16 @@ updatedRule, resp, err := client.Reconciliation.UpdateMatchingRule(matchingRule.
 })
 ```
 
+#### Delete Matching Rule
+
+```go
+deleted, resp, err := client.Reconciliation.DeleteMatchingRule(matchingRule.RuleID)
+if err != nil {
+    panic(err)
+}
+fmt.Println(deleted.Message)
+```
+
 #### Run Reconciliation
 
 ```go

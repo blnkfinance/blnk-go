@@ -44,6 +44,11 @@ type RunReconResp struct {
 	UpdatedAt string `json:"updated_at"`
 }
 
+// DeleteMatchingRuleResp is returned when a matching rule is deleted.
+type DeleteMatchingRuleResp struct {
+	Message string `json:"message"`
+}
+
 // ExternalTransaction is a single row of external data for instant reconciliation.
 // Description, Date, and Source are optional at the Core HTTP layer; omit them when unset.
 type ExternalTransaction struct {
@@ -116,6 +121,25 @@ func (s *ReconciliationService) UpdateMatchingRule(ruleID string, matcher Matche
 	}
 
 	return reconResp, resp, nil
+}
+
+func (s *ReconciliationService) DeleteMatchingRule(ruleID string) (*DeleteMatchingRuleResp, *http.Response, error) {
+	if ruleID == "" {
+		return nil, nil, fmt.Errorf("matching rule id is required")
+	}
+
+	req, err := s.client.NewRequest(fmt.Sprintf("reconciliation/matching-rules/%s", ruleID), http.MethodDelete, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	deleteResp := new(DeleteMatchingRuleResp)
+	resp, err := s.client.CallWithRetry(req, deleteResp)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return deleteResp, resp, nil
 }
 
 func (s *ReconciliationService) RunInstant(data RunInstantReconData) (*RunInstantReconResp, *http.Response, error) {
