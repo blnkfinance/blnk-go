@@ -1,25 +1,29 @@
 ---
-description: Blnk Go SDK workflow — no Postman in git, integration tests only
+description: Blnk Go SDK workflow — Postman cloud sync, run tests, no Postman in git
 alwaysApply: true
 ---
 
 # Blnk Go SDK workflow
 
-## Postman — never commit
+## Postman cloud — always sync automatically
 
-- Postman collections are for **local personal testing only**
-- **Do NOT** add, update, or commit `postman/` in blnk-go PRs
-- **Do NOT** use Postman MCP to sync collections into the repo
-- **Do NOT** add Postman folders to PR descriptions unless the user explicitly asks
-- Keep local Postman files in `manual/postman/` (gitignored)
-- Verify against Core with: `go test -tags=integration -run IssueXX ./integration/...`
+- After implementing an issue, **always** push the Postman folder to the user's **Postman cloud** via Postman MCP
+- Collection: **Blnk Go SDK — Local Core Tests** (`51542189-ceaf8a9a-751e-44bf-95a4-0dc7ce2cf28e`)
+- **Do NOT** tell the user to import JSON manually — sync it for them
+- **Do NOT** commit `postman/` or `manual/` to git
+
+## Testing — agent runs tests, user gets snippets
+
+- Always run `go test ./...` before finishing
+- Run `go test -tags=integration -run IssueXX ./integration/...` when Core integration applies
+- Give the user a **copy-paste Go snippet** to try the feature locally (not “run tests yourself” without code)
 
 ## PR scope (blnk-go)
 
-- SDK code + unit tests (`*_test.go` at package root)
-- Integration tests (`integration/issueXX_test.go`)
-- README SDK usage examples only
-- No Postman, no `manual/` artifacts
+- SDK code + unit tests (`*_test.go`)
+- Integration tests (`integration/issueXX_test.go`) when endpoint hits Core
+- README usage example for the new method
+- No Postman files in git
 
 ## Git
 
