@@ -466,7 +466,7 @@
           }
         },
         {
-          "name": "2. Create balances (source + dest)",
+          "name": "2. Create source balance",
           "event": [
             {
               "listen": "test",
@@ -478,12 +478,7 @@
                   "});",
                   "",
                   "const json = pm.response.json();",
-                  "if (!pm.collectionVariables.get('issue69_source_id')) {",
-                  "    pm.collectionVariables.set('issue69_source_id', json.balance_id);",
-                  "    postman.setNextRequest('2. Create balances (source + dest)');",
-                  "} else {",
-                  "    pm.collectionVariables.set('issue69_dest_id', json.balance_id);",
-                  "}"
+                  "pm.collectionVariables.set('issue69_source_id', json.balance_id);"
                 ]
               }
             }
@@ -502,7 +497,38 @@
           }
         },
         {
-          "name": "3. Fund destination",
+          "name": "3. Create destination balance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('issue69_dest_id', json.balance_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ledger_id\": \"{{issue69_ledger_id}}\",\n  \"currency\": \"USD\"\n}"
+            },
+            "url": "{{blnk_base_url}}/balances"
+          }
+        },
+        {
+          "name": "4. Fund destination",
           "event": [
             {
               "listen": "test",
@@ -530,7 +556,7 @@
           }
         },
         {
-          "name": "4. GET balance from_source",
+          "name": "5. GET balance from_source",
           "event": [
             {
               "listen": "test",
