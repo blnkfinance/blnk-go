@@ -338,6 +338,22 @@ fmt.Printf("Bulk batch %s: %d transactions (%s)\n",
     bulkResult.BatchID, bulkResult.TransactionCount, bulkResult.Status)
 ```
 
+### Recovering Stuck Queued Transactions
+
+Manually trigger recovery of transactions stuck in the queue (`POST /transactions/recover`). Optionally pass a `threshold` duration (e.g. `5m`, `1h`):
+
+```go
+result, resp, err := client.Transaction.RecoverQueue(blnkgo.RecoverQueueRequest{
+    Threshold: "5m",
+})
+if err != nil {
+    fmt.Printf("Error recovering queue: %v\n", err)
+    return
+}
+
+fmt.Printf("Recovered %d transactions (threshold %s)\n", result.Recovered, result.Threshold)
+```
+
 ### Getting a Transaction by Reference
 
 Look up a transaction using its unique reference string:
