@@ -412,6 +412,121 @@ func TestRefundTransaction(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
+func TestRefundTransaction_BackwardCompatibleNoBody(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+
+	mockClient.On("NewRequest", "refund-transaction/txn-compat", http.MethodPost, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusCreated,
+	}, nil)
+
+	_, resp, err := svc.Refund("txn-compat")
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	mockClient.AssertCalled(t, "NewRequest", "refund-transaction/txn-compat", http.MethodPost, nil)
+	mockClient.AssertExpectations(t)
+}
+
+func TestRefundTransaction_ExplicitNilBody(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+
+	mockClient.On("NewRequest", "refund-transaction/txn-nil-body", http.MethodPost, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusCreated,
+	}, nil)
+
+	_, _, err := svc.Refund("txn-nil-body", nil)
+
+	assert.NoError(t, err)
+	mockClient.AssertCalled(t, "NewRequest", "refund-transaction/txn-nil-body", http.MethodPost, nil)
+	mockClient.AssertExpectations(t)
+}
+
+func TestRefundTransaction_TooManyBodies(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+
+	result, resp, err := svc.Refund("txn-123",
+		&blnkgo.RefundTransactionRequest{SkipQueue: true},
+		&blnkgo.RefundTransactionRequest{SkipQueue: true},
+	)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "at most one optional request body")
+	assert.Nil(t, result)
+	assert.Nil(t, resp)
+	mockClient.AssertNotCalled(t, "NewRequest")
+}
+
+func TestTransaction_ParentTransaction_UnmarshalJSON(t *testing.T) {
+	payload := []byte(`{
+		"transaction_id": "txn_refund_1",
+		"parent_transaction": "txn_original_1",
+		"amount": 500,
+		"source": "@Recipient",
+		"destination": "@FundingPool",
+		"status": "APPLIED"
+	}`)
+
+	var txn blnkgo.Transaction
+	err := json.Unmarshal(payload, &txn)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "txn_refund_1", txn.TransactionID)
+	assert.Equal(t, "txn_original_1", txn.ParentTransactionID)
+	assert.Equal(t, float64(500), txn.Amount)
+	assert.Equal(t, "@Recipient", txn.Source)
+	assert.Equal(t, "@FundingPool", txn.Destination)
+	assert.Equal(t, blnkgo.PryTransactionStatus("APPLIED"), txn.Status)
+}
+
+func TestRefundTransaction_WithSkipQueue(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	refundBody := &blnkgo.RefundTransactionRequest{SkipQueue: true}
+
+	mockClient.On(
+		"NewRequest",
+		"refund-transaction/txn-456",
+		http.MethodPost,
+		mock.MatchedBy(func(body interface{}) bool {
+			req, ok := body.(*blnkgo.RefundTransactionRequest)
+			return ok && req.SkipQueue
+		}),
+	).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusCreated,
+	}, nil).Run(func(args mock.Arguments) {
+		transaction := args.Get(1).(*blnkgo.Transaction)
+		*transaction = blnkgo.Transaction{
+			ParentTransaction: blnkgo.ParentTransaction{
+				Status: blnkgo.PryTransactionStatus("APPLIED"),
+			},
+			TransactionID: "txn-refund-sync",
+		}
+	})
+
+	result, resp, err := svc.Refund("txn-456", refundBody)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t, "txn-refund-sync", result.TransactionID)
+	assert.Equal(t, blnkgo.PryTransactionStatus("APPLIED"), result.Status)
+	mockClient.AssertExpectations(t)
+}
+
+func TestRefundTransaction_EmptyTransactionID(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+
+	result, resp, err := svc.Refund("")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "transactionID is required")
+	assert.Nil(t, result)
+	assert.Nil(t, resp)
+	mockClient.AssertNotCalled(t, "NewRequest")
+}
+
 func TestRefundTransaction_FailedRequest(t *testing.T) {
 	mockClient, svc := setupTransactionService()
 

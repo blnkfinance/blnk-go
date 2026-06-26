@@ -46,8 +46,9 @@ type CreateTransactionRequest struct {
 
 type Transaction struct {
 	ParentTransaction
-	CreatedAt     time.Time `json:"created_at"`
-	TransactionID string    `json:"transaction_id"`
+	CreatedAt           time.Time `json:"created_at"`
+	TransactionID       string    `json:"transaction_id"`
+	ParentTransactionID string    `json:"parent_transaction,omitempty"`
 }
 
 type UpdateStatus struct {
@@ -69,6 +70,12 @@ type CreateBulkTransactionResponse struct {
 	Status           string `json:"status"`
 	TransactionCount int    `json:"transaction_count,omitempty"`
 	Message          string `json:"message,omitempty"`
+}
+
+// RefundTransactionRequest is the optional body for POST /refund-transaction/{id}.
+// Omit the body (pass nil) to queue the refund using Core defaults.
+type RefundTransactionRequest struct {
+	SkipQueue bool `json:"skip_queue,omitempty"`
 }
 
 // MaxBulkInflightItems caps the number of transactions accepted in a single
@@ -223,9 +230,24 @@ func (s *TransactionService) Update(transactionID string, body UpdateStatus) (*T
 	return transaction, resp, nil
 }
 
-func (s *TransactionService) Refund(transactionID string) (*Transaction, *http.Response, error) {
+func (s *TransactionService) Refund(transactionID string, body ...*RefundTransactionRequest) (*Transaction, *http.Response, error) {
+	if transactionID == "" {
+		return nil, nil, fmt.Errorf("transactionID is required")
+	}
+	if len(body) > 1 {
+		return nil, nil, fmt.Errorf("Refund accepts at most one optional request body")
+	}
+
+	var reqBody interface{}
+	if len(body) > 0 && body[0] != nil {
+		if err := ValidateRefundTransaction(*body[0]); err != nil {
+			return nil, nil, err
+		}
+		reqBody = body[0]
+	}
+
 	u := fmt.Sprintf("refund-transaction/%s", transactionID)
-	req, err := s.client.NewRequest(u, http.MethodPost, nil)
+	req, err := s.client.NewRequest(u, http.MethodPost, reqBody)
 	if err != nil {
 		return nil, nil, err
 	}

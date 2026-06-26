@@ -112,6 +112,12 @@ func ValidateRecoverQueue(r RecoverQueueRequest) error {
 	return nil
 }
 
+func ValidateRefundTransaction(r RefundTransactionRequest) error {
+	// RefundTransactionRequest only exposes skip_queue; no extra field validation needed
+	// beyond JSON types. Kept for parity with other transaction validators.
+	return nil
+}
+
 func validateSources(sources []Source, amount float64, sb *strings.Builder) error {
 	//total amount of sources  must be equal to the amount
 	total := 0.0

@@ -19,6 +19,7 @@ Import these two files into Postman (one-time):
 | **Issue #73 — Search identities** | `POST /search/identities` | 0.14.5+ |
 | **Issue #36 — Transaction GetLineage** | `GET /transactions/{id}/lineage` | 0.14.5+ |
 | **Issue #40 — RecoverQueue** | `POST /transactions/recover` | 0.14.5+ |
+| **Issue #70 — Refund skip_queue** | `POST /refund-transaction/{id}` | 0.14.5+ |
 
 ## CLI (same tests, no Postman UI)
 
