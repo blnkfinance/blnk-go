@@ -50,12 +50,14 @@ type Transaction struct {
 	CreatedAt           time.Time `json:"created_at"`
 	TransactionID       string    `json:"transaction_id"`
 	ParentTransactionID string    `json:"parent_transaction,omitempty"`
+	Queued              bool      `json:"queued,omitempty"`
 }
 
 type UpdateStatus struct {
 	Status        InflightStatus `json:"status"`
 	Amount        float64        `json:"amount"`
 	PreciseAmount *big.Int       `json:"precise_amount"`
+	SkipQueue     bool           `json:"skip_queue,omitempty"`
 }
 
 type CreateBulkTransactionRequest struct {
@@ -96,6 +98,7 @@ type BulkCommitInflightItem struct {
 // transactions in one call.
 type BulkCommitInflightRequest struct {
 	Transactions []BulkCommitInflightItem `json:"transactions"`
+	SkipQueue    bool                     `json:"skip_queue,omitempty"`
 }
 
 // BulkCommitInflightResult is the per-item outcome in BulkCommitInflightResponse.
@@ -117,6 +120,7 @@ type BulkCommitInflightResponse struct {
 // transactions in one call.
 type BulkVoidInflightRequest struct {
 	TransactionIDs []string `json:"transaction_ids"`
+	SkipQueue      bool     `json:"skip_queue,omitempty"`
 }
 
 // BulkVoidInflightResult is the per-item outcome in BulkVoidInflightResponse.
