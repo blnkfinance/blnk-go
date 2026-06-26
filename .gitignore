@@ -40,3 +40,7 @@ dist/
 
 # Temporary files
 *.tmp
+
+# Personal Postman collections (local testing only — not for the repo)
+postman/
+manual/

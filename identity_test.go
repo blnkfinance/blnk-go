@@ -266,6 +266,31 @@ func TestIdentityService_Update_Successful(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
+func TestIdentityService_Update_ClearsFieldsWithEmptyStrings(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+	identityId := "idt_12345"
+
+	updateIdentity := &blnkgo.Identity{
+		FirstName:    "Jane",
+		EmailAddress: "",
+		PhoneNumber:  "",
+		Category:     "",
+		Street:       "",
+		Country:      "",
+		State:        "",
+		PostCode:     "",
+		City:         "",
+	}
+
+	mockClient.On("NewRequest", fmt.Sprintf("identities/%s", identityId), http.MethodPut, updateIdentity).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{}, nil)
+
+	_, httpResp, err := svc.Update(identityId, updateIdentity)
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}
+
 func TestIdentityService_Update_NotFound(t *testing.T) {
 	mockClient, svc := setupIdentityService()
 	identityId := "12345"
