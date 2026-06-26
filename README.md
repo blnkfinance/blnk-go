@@ -413,7 +413,7 @@ transaction, resp, err := client.Transaction.Create(inflightBody)
 #### Committing or Voiding an Inflight Transaction
 
 ```go
-// Commit the transaction
+// Commit the transaction (queued by default on Core 0.15.0+)
 updateBody := blnkgo.UpdateStatus{
     Status: blnkgo.InflightStatusCommit,
 }
@@ -421,6 +421,17 @@ updateBody := blnkgo.UpdateStatus{
 updatedTransaction, resp, err := client.Transaction.Update(
     "txn_id_here",
     updateBody,
+)
+
+// Synchronous commit (skip_queue: true) — returns APPLIED immediately
+syncCommitBody := blnkgo.UpdateStatus{
+    Status:    blnkgo.InflightStatusCommit,
+    SkipQueue: true,
+}
+
+syncCommitted, resp, err := client.Transaction.Update(
+    "txn_id_here",
+    syncCommitBody,
 )
 
 // Or void the transaction
@@ -432,6 +443,12 @@ voidedTransaction, resp, err := client.Transaction.Update(
     "txn_id_here",
     voidBody,
 )
+
+// Synchronous void
+syncVoidBody := blnkgo.UpdateStatus{
+    Status:    blnkgo.InflightStatusVoid,
+    SkipQueue: true,
+}
 ```
 
 #### Bulk Commit Inflight Transactions
@@ -440,6 +457,7 @@ Commit multiple independently-created inflight transactions in a single call:
 
 ```go
 bulkCommitBody := blnkgo.BulkCommitInflightRequest{
+    SkipQueue: true, // optional: process synchronously without queuing
     Transactions: []blnkgo.BulkCommitInflightItem{
         {TransactionID: "txn_id_1"},
         {TransactionID: "txn_id_2", Amount: 40},
@@ -465,6 +483,7 @@ Void multiple independently-created inflight transactions in a single call:
 
 ```go
 bulkVoidBody := blnkgo.BulkVoidInflightRequest{
+    SkipQueue: true, // optional: process synchronously without queuing
     TransactionIDs: []string{
         "txn_id_1",
         "txn_id_2",

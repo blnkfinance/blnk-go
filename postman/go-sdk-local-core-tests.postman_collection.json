@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Blnk Go SDK — Local Core Tests",
-    "description": "Click **Run** on this collection to verify Go SDK issues against local Blnk Core 0.14.5.\n\n**Setup:** import `go-sdk-local-core.postman_environment.json` and select it.\n\n**Folders:**\n- Issue #40 — Transaction.RecoverQueue\n- Issue #70 — Transaction.Refund skip_queue\n- Issue #71 — precise_distribution split legs\n- Issue #73 — Search identities resource type\n- Issue #36 — Transaction.GetLineage\n\nVariables are chained automatically between requests (where needed).",
+    "description": "Click **Run** on this collection to verify Go SDK issues against local Blnk Core 0.14.5.\n\n**Setup:** import `go-sdk-local-core.postman_environment.json` and select it.\n\n**Folders:**\n- Issue #40 — Transaction.RecoverQueue\n- Issue #70 — Transaction.Refund skip_queue\n- Issue #86 — UpdateStatus skip_queue\n- Issue #71 — precise_distribution split legs\n- Issue #73 — Search identities resource type\n- Issue #36 — Transaction.GetLineage\n\nVariables are chained automatically between requests (where needed).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -43,6 +43,14 @@
     },
     {
       "key": "issue71_balance_c",
+      "value": ""
+    },
+    {
+      "key": "issue86_inflight_txn_id",
+      "value": ""
+    },
+    {
+      "key": "issue86_void_txn_id",
       "value": ""
     }
   ],
@@ -265,6 +273,160 @@
             },
             "url": "{{blnk_base_url}}/refund-transaction/{{refund_sync_source_txn_id}}",
             "description": "Go SDK: Transaction.Refund(id, &RefundTransactionRequest{SkipQueue: true})"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issue #86 — UpdateStatus skip_queue",
+      "item": [
+        {
+          "name": "1. Create inflight transaction (seed)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('issue86_commit_ref', `issue86-commit-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.expect(json.status).to.eql('INFLIGHT');",
+                  "pm.collectionVariables.set('issue86_inflight_txn_id', json.transaction_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 5000,\n  \"reference\": \"{{issue86_commit_ref}}\",\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"source\": \"@FundingPool\",\n  \"destination\": \"@Recipient\",\n  \"skip_queue\": true,\n  \"inflight\": true,\n  \"inflight_expiry_date\": \"2026-12-31T23:59:59Z\",\n  \"allow_overdraft\": true,\n  \"description\": \"Go SDK issue 86 commit seed\"\n}"
+            },
+            "url": "{{blnk_base_url}}/transactions"
+          }
+        },
+        {
+          "name": "2. Commit inflight (skip_queue synchronous)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('commit applied synchronously', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('APPLIED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"commit\",\n  \"skip_queue\": true\n}"
+            },
+            "url": "{{blnk_base_url}}/transactions/inflight/{{issue86_inflight_txn_id}}",
+            "description": "Go SDK: Transaction.Update(id, UpdateStatus{Status: commit, SkipQueue: true})"
+          }
+        },
+        {
+          "name": "3. Create inflight transaction (void seed)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('issue86_void_ref', `issue86-void-${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('issue86_void_txn_id', json.transaction_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 5000,\n  \"reference\": \"{{issue86_void_ref}}\",\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"source\": \"@FundingPool\",\n  \"destination\": \"@Recipient\",\n  \"skip_queue\": true,\n  \"inflight\": true,\n  \"inflight_expiry_date\": \"2026-12-31T23:59:59Z\",\n  \"allow_overdraft\": true,\n  \"description\": \"Go SDK issue 86 void seed\"\n}"
+            },
+            "url": "{{blnk_base_url}}/transactions"
+          }
+        },
+        {
+          "name": "4. Void inflight (skip_queue synchronous)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('void applied synchronously', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('VOID');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"void\",\n  \"skip_queue\": true\n}"
+            },
+            "url": "{{blnk_base_url}}/transactions/inflight/{{issue86_void_txn_id}}",
+            "description": "Go SDK: Transaction.Update(id, UpdateStatus{Status: void, SkipQueue: true})"
           }
         }
       ]

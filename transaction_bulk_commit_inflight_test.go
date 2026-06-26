@@ -141,3 +141,42 @@ func TestTransactionService_BulkCommitInflight_ServerError(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	mockClient.AssertExpectations(t)
 }
+
+func TestTransactionService_BulkCommitInflight_WithSkipQueue(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	body := blnkgo.BulkCommitInflightRequest{
+		SkipQueue: true,
+		Transactions: []blnkgo.BulkCommitInflightItem{
+			{TransactionID: "txn_11111111-1111-4111-8111-111111111111"},
+		},
+	}
+
+	mockClient.On(
+		"NewRequest",
+		"transactions/inflight/bulk/commit",
+		http.MethodPost,
+		mock.MatchedBy(func(req interface{}) bool {
+			bulk, ok := req.(blnkgo.BulkCommitInflightRequest)
+			return ok && bulk.SkipQueue && len(bulk.Transactions) == 1
+		}),
+	).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusOK,
+	}, nil).Run(func(args mock.Arguments) {
+		response := args.Get(1).(*blnkgo.BulkCommitInflightResponse)
+		*response = blnkgo.BulkCommitInflightResponse{
+			Succeeded: 1,
+			Results: []blnkgo.BulkCommitInflightResult{
+				{TransactionID: "txn_11111111-1111-4111-8111-111111111111", Status: "succeeded"},
+			},
+		}
+	})
+
+	result, resp, err := svc.BulkCommitInflight(body)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, 1, result.Succeeded)
+	assert.Equal(t, "succeeded", result.Results[0].Status)
+	mockClient.AssertExpectations(t)
+}

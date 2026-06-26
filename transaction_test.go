@@ -515,6 +515,69 @@ func TestRefundTransaction_WithSkipQueue(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
+func TestUpdateStatus_WithSkipQueue(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	body := blnkgo.UpdateStatus{
+		Status:    blnkgo.InflightStatusCommit,
+		SkipQueue: true,
+	}
+
+	mockClient.On(
+		"NewRequest",
+		"transactions/inflight/txn-inflight-1",
+		http.MethodPut,
+		mock.MatchedBy(func(req interface{}) bool {
+			update, ok := req.(blnkgo.UpdateStatus)
+			return ok && update.SkipQueue && update.Status == blnkgo.InflightStatusCommit
+		}),
+	).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusOK,
+	}, nil).Run(func(args mock.Arguments) {
+		transaction := args.Get(1).(*blnkgo.Transaction)
+		*transaction = blnkgo.Transaction{
+			TransactionID: "txn-inflight-1",
+			ParentTransaction: blnkgo.ParentTransaction{
+				Status: blnkgo.PryTransactionStatus("APPLIED"),
+			},
+		}
+	})
+
+	result, resp, err := svc.Update("txn-inflight-1", body)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, blnkgo.PryTransactionStatus("APPLIED"), result.Status)
+	mockClient.AssertExpectations(t)
+}
+
+func TestUpdateStatus_SkipQueueJSONMarshal(t *testing.T) {
+	body := blnkgo.UpdateStatus{
+		Status:    blnkgo.InflightStatusCommit,
+		SkipQueue: true,
+	}
+	data, err := json.Marshal(body)
+	assert.NoError(t, err)
+	assert.Contains(t, string(data), `"skip_queue":true`)
+}
+
+func TestTransaction_Queued_UnmarshalJSON(t *testing.T) {
+	payload := []byte(`{
+		"transaction_id": "txn_queued_commit",
+		"status": "INFLIGHT",
+		"queued": true
+	}`)
+
+	var txn blnkgo.Transaction
+	err := json.Unmarshal(payload, &txn)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "txn_queued_commit", txn.TransactionID)
+	assert.True(t, txn.Queued)
+	assert.Equal(t, blnkgo.PryTransactionStatus("INFLIGHT"), txn.Status)
+}
+
 func TestRefundTransaction_EmptyTransactionID(t *testing.T) {
 	mockClient, svc := setupTransactionService()
 
