@@ -62,6 +62,29 @@ func TestIssue41_RunInstant_DryRun(t *testing.T) {
 	require.Contains(t, result.ReconciliationID, "recon_")
 }
 
+func TestIssue41_RunInstant_MinimalPayload(t *testing.T) {
+	client := newIntegrationClient(t)
+	ruleID := createInstantReconMatchingRule(t, client)
+
+	extID := fmt.Sprintf("ext-min-%d", time.Now().UnixNano())
+	result, resp, err := client.Reconciliation.RunInstant(blnkgo.RunInstantReconData{
+		ExternalTransactions: []blnkgo.ExternalTransaction{
+			{
+				ID:        extID,
+				Amount:    1,
+				Reference: "r1",
+				Currency:  "USD",
+			},
+		},
+		Strategy:        blnkgo.ReconciliationStrategyOneToOne,
+		DryRun:          true,
+		MatchingRuleIDs: []string{ruleID},
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NotEmpty(t, result.ReconciliationID)
+}
+
 func TestIssue41_RunInstant_ValidationError(t *testing.T) {
 	client := newIntegrationClient(t)
 

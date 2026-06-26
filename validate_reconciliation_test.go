@@ -30,6 +30,17 @@ func TestValidateRunInstantReconData_Valid(t *testing.T) {
 	require.NoError(t, blnkgo.ValidateRunInstantReconData(validRunInstantReconData()))
 }
 
+func TestValidateRunInstantReconData_MinimalExternalTransaction(t *testing.T) {
+	data := blnkgo.RunInstantReconData{
+		ExternalTransactions: []blnkgo.ExternalTransaction{
+			{ID: "ext-1", Amount: 1, Reference: "r1", Currency: "USD"},
+		},
+		Strategy:        blnkgo.ReconciliationStrategyOneToOne,
+		MatchingRuleIDs: []string{"rule_abc123"},
+	}
+	require.NoError(t, blnkgo.ValidateRunInstantReconData(data))
+}
+
 func TestValidateRunInstantReconData_EmptyExternalTransactions(t *testing.T) {
 	data := validRunInstantReconData()
 	data.ExternalTransactions = nil
@@ -38,12 +49,12 @@ func TestValidateRunInstantReconData_EmptyExternalTransactions(t *testing.T) {
 	require.Contains(t, err.Error(), "external_transactions must be a non-empty array")
 }
 
-func TestValidateRunInstantReconData_InvalidStrategy(t *testing.T) {
+func TestValidateRunInstantReconData_EmptyStrategy(t *testing.T) {
 	data := validRunInstantReconData()
-	data.Strategy = "invalid"
+	data.Strategy = ""
 	err := blnkgo.ValidateRunInstantReconData(data)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "strategy must be one of")
+	require.Contains(t, err.Error(), "strategy is required")
 }
 
 func TestValidateRunInstantReconData_EmptyMatchingRuleIDs(t *testing.T) {
@@ -52,20 +63,4 @@ func TestValidateRunInstantReconData_EmptyMatchingRuleIDs(t *testing.T) {
 	err := blnkgo.ValidateRunInstantReconData(data)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "matching_rule_ids must be a non-empty array")
-}
-
-func TestValidateRunInstantReconData_MissingExternalTransactionField(t *testing.T) {
-	data := validRunInstantReconData()
-	data.ExternalTransactions[0].Reference = ""
-	err := blnkgo.ValidateRunInstantReconData(data)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "each external transaction must include")
-}
-
-func TestValidateRunInstantReconData_ZeroDate(t *testing.T) {
-	data := validRunInstantReconData()
-	data.ExternalTransactions[0].Date = time.Time{}
-	err := blnkgo.ValidateRunInstantReconData(data)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "each external transaction must include")
 }
