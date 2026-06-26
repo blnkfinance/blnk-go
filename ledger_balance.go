@@ -42,6 +42,12 @@ type CreateLedgerBalanceRequest struct {
 	MetaData           map[string]interface{} `json:"meta_data,omitempty"`
 }
 
+// GetBalanceRequest holds optional query parameters for LedgerBalance.Get.
+type GetBalanceRequest struct {
+	// FromSource reconstructs the balance from transactions instead of snapshots.
+	FromSource bool `json:"from_source,omitempty"`
+}
+
 func (s *LedgerBalanceService) Create(body CreateLedgerBalanceRequest) (*LedgerBalance, *http.Response, error) {
 	body.AllocationStrategy = normalizeAllocationStrategy(body.AllocationStrategy)
 	if err := ValidateCreateLedgerBalance(body); err != nil {
@@ -62,11 +68,17 @@ func (s *LedgerBalanceService) Create(body CreateLedgerBalanceRequest) (*LedgerB
 	return ledgerBalance, resp, nil
 }
 
-func (s *LedgerBalanceService) Get(balanceID string) (*LedgerBalance, *http.Response, error) {
+func (s *LedgerBalanceService) Get(balanceID string, opts ...*GetBalanceRequest) (*LedgerBalance, *http.Response, error) {
 	if balanceID == "" {
 		return nil, nil, fmt.Errorf("invalid: id is required")
 	}
+	if len(opts) > 1 {
+		return nil, nil, fmt.Errorf("Get accepts at most one optional request")
+	}
 	u := fmt.Sprintf("balances/%s", balanceID)
+	if len(opts) > 0 && opts[0] != nil && opts[0].FromSource {
+		u += "?from_source=true"
+	}
 	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {
 		return nil, nil, err
