@@ -44,6 +44,7 @@ type service struct {
 
 type Options struct {
 	RetryCount int
+	RetryDelay time.Duration
 	Timeout    time.Duration
 	Logger     Logger
 }
@@ -51,6 +52,7 @@ type Options struct {
 func DefaultOptions() Options {
 	return Options{
 		RetryCount: 1,
+		RetryDelay: defaultRetryDelay,
 		Timeout:    time.Second * 10,
 		Logger:     NewDefaultLogger(),
 	}
@@ -126,19 +128,30 @@ func (c *Client) NewRequest(endpoint, method string, opt interface{}) (*http.Req
 		u.RawQuery = q.Encode()
 	}
 
-	var bodyBuf io.ReadWriter
-
+	var bodyBytes []byte
 	if method != http.MethodGet && opt != nil {
-		bodyBuf = new(bytes.Buffer)
-		err := json.NewEncoder(bodyBuf).Encode(opt)
+		var err error
+		bodyBytes, err = json.Marshal(opt)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	req, err := http.NewRequest(method, u.String(), bodyBuf)
+	var bodyReader io.Reader
+	if len(bodyBytes) > 0 {
+		bodyReader = bytes.NewReader(bodyBytes)
+	}
+
+	req, err := http.NewRequest(method, u.String(), bodyReader)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(bodyBytes) > 0 {
+		req.ContentLength = int64(len(bodyBytes))
+		req.GetBody = func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewReader(bodyBytes)), nil
+		}
 	}
 
 	//if c has api key, add it to the header
@@ -150,39 +163,53 @@ func (c *Client) NewRequest(endpoint, method string, opt interface{}) (*http.Req
 	return req, nil
 }
 
-// to:Do implement retry strategies
 func (c *Client) CallWithRetry(req *http.Request, resBody interface{}) (*http.Response, error) {
-	retryCount := c.options.RetryCount
+	maxAttempts := normalizeRetryCount(c.options.RetryCount)
+	baseDelay := normalizeRetryDelay(c.options.RetryDelay)
+	canRetry := maxAttempts > 1 && isRetryableHTTPMethod(req.Method)
 
-	var resp *http.Response
-	var err error
+	var lastResp *http.Response
+	var lastErr error
 
-	for i := 0; i < retryCount; i++ {
-		resp, err = c.client.Do(req)
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if attempt > 1 && canRetry {
+			delay := retryDelayForAttempt(attempt-1, baseDelay)
+			c.options.Logger.Info(fmt.Sprintf("Retrying request (attempt %d/%d) after %v", attempt, maxAttempts, delay))
+			time.Sleep(delay)
+			if err := resetRequestBody(req); err != nil {
+				return lastResp, err
+			}
+		}
+
+		resp, err := c.client.Do(req)
 		if err != nil {
+			lastErr = err
 			c.options.Logger.Info(err.Error())
-			time.Sleep(time.Second * 2)
+			if canRetry && attempt < maxAttempts && isRetryableNetworkError(err) {
+				continue
+			}
+			return lastResp, err
+		}
+
+		if canRetry && isRetryableHTTPStatus(resp.StatusCode) && attempt < maxAttempts {
+			c.options.Logger.Error(fmt.Sprintf("Request failed with status %d; retrying.", resp.StatusCode))
+			io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
+			lastResp = resp
 			continue
 		}
 
-		defer resp.Body.Close()
-		if resp.StatusCode >= 500 {
-			logString := fmt.Sprintf("Request failed with status code %v and Status %v", resp.StatusCode, resp.Status)
-			c.options.Logger.Error(logString)
-			time.Sleep(time.Second * 2)
-			continue
+		decodeErr := c.DecodeResponse(resp, resBody)
+		if decodeErr != nil {
+			return resp, decodeErr
 		}
-
-		//check resp
-		err = c.DecodeResponse(resp, resBody)
-		if err != nil {
-			c.options.Logger.Error(err.Error())
-			return resp, err
-		}
-
 		return resp, nil
 	}
-	return nil, errors.New("max retry count exceeded")
+
+	if lastErr != nil {
+		return lastResp, lastErr
+	}
+	return lastResp, errors.New("request failed after maximum retry attempts")
 }
 
 // decode response, this function will take in a response, and an interface it'll then decode the response body into the interface

@@ -160,6 +160,26 @@ func main() {
 
 This creates a new ledger for storing customer balances.
 
+### Retries
+
+`WithRetry` sets the **total number of attempts** (first try included). Default is `1` (no retries).
+
+```go
+client := blnkgo.NewClient(
+    baseURL,
+    &apiKey,
+    blnkgo.WithRetry(3),                    // up to 3 attempts
+    blnkgo.WithRetryDelay(2 * time.Second), // linear backoff base delay
+)
+```
+
+Retry behavior (aligned with the TypeScript SDK):
+
+- **GET** requests retry on **5xx** responses and retryable network errors
+- **POST**, **PUT**, and **DELETE** are **not** retried (avoids duplicate money movement)
+- Request timeouts are not retried
+- Backoff delay is `RetryDelay × attempt` between retries (2s, 4s, … with default delay)
+
 ### Updating a Ledger Name
 
 Rename an existing ledger without changing its ID or affecting balances and transactions:
