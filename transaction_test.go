@@ -1,6 +1,7 @@
 package blnkgo_test
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -930,6 +931,50 @@ func TestTransactionService_CreateBulk_AsyncSuccess(t *testing.T) {
 	assert.NotNil(t, resp)
 	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 	mockClient.AssertExpectations(t)
+}
+
+func TestCreateBulkTransactionResponse_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		payload  string
+		expected blnkgo.CreateBulkTransactionResponse
+	}{
+		{
+			name: "sync applied response",
+			payload: `{
+				"batch_id": "bulk_c62f200b-905f-4983-a349-cadd279234aa",
+				"status": "applied",
+				"transaction_count": 4
+			}`,
+			expected: blnkgo.CreateBulkTransactionResponse{
+				BatchID:          "bulk_c62f200b-905f-4983-a349-cadd279234aa",
+				Status:           "applied",
+				TransactionCount: 4,
+			},
+		},
+		{
+			name: "async queued response with message",
+			payload: `{
+				"batch_id": "bulk_c62f200b-905f-4983-a349-cadd279234aa",
+				"status": "queued",
+				"message": "Bulk transaction processing started"
+			}`,
+			expected: blnkgo.CreateBulkTransactionResponse{
+				BatchID: "bulk_c62f200b-905f-4983-a349-cadd279234aa",
+				Status:  "queued",
+				Message: "Bulk transaction processing started",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var response blnkgo.CreateBulkTransactionResponse
+			err := json.Unmarshal([]byte(tt.payload), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, response)
+		})
+	}
 }
 
 func TestTransactionService_CreateBulk_EmptyTransactions(t *testing.T) {
