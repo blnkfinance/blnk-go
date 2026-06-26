@@ -12,6 +12,7 @@ export BLNK_API_KEY=your_master_or_api_key
 
 ```bash
 # one issue
+go test -tags=integration -v ./integration/... -run Issue70
 go test -tags=integration -v ./integration/... -run Issue40
 go test -tags=integration -v ./integration/... -run Issue73
 go test -tags=integration -v ./integration/... -run Issue36
@@ -33,6 +34,7 @@ go test -tags=integration -v ./integration/...
 | Issue | Core version | Why |
 |-------|--------------|-----|
 | #40 recover queue | 0.14.x+ | Not 0.15-only |
+| #70 refund skip_queue | 0.14.x+ | Optional body on POST /refund-transaction/{id} |
 | #73 search identities | 0.14.x+ | Not 0.15-only |
 | #36 transaction lineage | 0.14.x+ | Not 0.15-only |
 | 0.15-only features (delete identity, hooks, api-keys, etc.) | 0.15.0 | Test when we reach Go 1.3.0 issues |

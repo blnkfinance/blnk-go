@@ -402,7 +402,7 @@ func TestRefundTransaction(t *testing.T) {
 		}
 	})
 
-	transaction, resp, err := svc.Refund("txn-123")
+	transaction, resp, err := svc.Refund("txn-123", nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
@@ -412,12 +412,59 @@ func TestRefundTransaction(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
+func TestRefundTransaction_WithSkipQueue(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	refundBody := &blnkgo.RefundTransactionRequest{SkipQueue: true}
+
+	mockClient.On(
+		"NewRequest",
+		"refund-transaction/txn-456",
+		http.MethodPost,
+		mock.MatchedBy(func(body interface{}) bool {
+			req, ok := body.(*blnkgo.RefundTransactionRequest)
+			return ok && req.SkipQueue
+		}),
+	).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusCreated,
+	}, nil).Run(func(args mock.Arguments) {
+		transaction := args.Get(1).(*blnkgo.Transaction)
+		*transaction = blnkgo.Transaction{
+			ParentTransaction: blnkgo.ParentTransaction{
+				Status: blnkgo.PryTransactionStatus("APPLIED"),
+			},
+			TransactionID: "txn-refund-sync",
+		}
+	})
+
+	result, resp, err := svc.Refund("txn-456", refundBody)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t, "txn-refund-sync", result.TransactionID)
+	assert.Equal(t, blnkgo.PryTransactionStatus("APPLIED"), result.Status)
+	mockClient.AssertExpectations(t)
+}
+
+func TestRefundTransaction_EmptyTransactionID(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+
+	result, resp, err := svc.Refund("", nil)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "transactionID is required")
+	assert.Nil(t, result)
+	assert.Nil(t, resp)
+	mockClient.AssertNotCalled(t, "NewRequest")
+}
+
 func TestRefundTransaction_FailedRequest(t *testing.T) {
 	mockClient, svc := setupTransactionService()
 
 	mockClient.On("NewRequest", "refund-transaction/txn-123", http.MethodPost, nil).Return(nil, errors.New("failed to create request"))
 
-	transaction, resp, err := svc.Refund("txn-123")
+	transaction, resp, err := svc.Refund("txn-123", nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, transaction)
@@ -434,7 +481,7 @@ func TestRefundTransaction_ClientError(t *testing.T) {
 	mockClient.On("NewRequest", "refund-transaction/txn-123", http.MethodPost, nil).Return(&http.Request{}, nil)
 	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusBadRequest}, errors.New("client error"))
 
-	transaction, resp, err := svc.Refund("txn-123")
+	transaction, resp, err := svc.Refund("txn-123", nil)
 
 	assert.Error(t, err)
 	assert.Nil(t, transaction)

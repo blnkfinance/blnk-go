@@ -71,6 +71,12 @@ type CreateBulkTransactionResponse struct {
 	Message          string `json:"message,omitempty"`
 }
 
+// RefundTransactionRequest is the optional body for POST /refund-transaction/{id}.
+// Omit the body (pass nil) to queue the refund using Core defaults.
+type RefundTransactionRequest struct {
+	SkipQueue bool `json:"skip_queue,omitempty"`
+}
+
 // MaxBulkInflightItems caps the number of transactions accepted in a single
 // bulk commit or bulk void call.
 const MaxBulkInflightItems = 100
@@ -223,9 +229,22 @@ func (s *TransactionService) Update(transactionID string, body UpdateStatus) (*T
 	return transaction, resp, nil
 }
 
-func (s *TransactionService) Refund(transactionID string) (*Transaction, *http.Response, error) {
+func (s *TransactionService) Refund(transactionID string, body *RefundTransactionRequest) (*Transaction, *http.Response, error) {
+	if transactionID == "" {
+		return nil, nil, fmt.Errorf("transactionID is required")
+	}
+	if body != nil {
+		if err := ValidateRefundTransaction(*body); err != nil {
+			return nil, nil, err
+		}
+	}
+
 	u := fmt.Sprintf("refund-transaction/%s", transactionID)
-	req, err := s.client.NewRequest(u, http.MethodPost, nil)
+	var reqBody interface{}
+	if body != nil {
+		reqBody = body
+	}
+	req, err := s.client.NewRequest(u, http.MethodPost, reqBody)
 	if err != nil {
 		return nil, nil, err
 	}

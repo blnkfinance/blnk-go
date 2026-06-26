@@ -354,6 +354,20 @@ if err != nil {
 fmt.Printf("Recovered %d transactions (threshold %s)\n", result.Recovered, result.Threshold)
 ```
 
+### Refunding a Transaction
+
+Refund by transaction ID. Omit the body to queue the refund (Core default), or pass `skip_queue: true` for synchronous processing:
+
+```go
+// Queued refund (default)
+refund, resp, err := client.Transaction.Refund(originalTxnID, nil)
+
+// Synchronous refund
+refund, resp, err := client.Transaction.Refund(originalTxnID, &blnkgo.RefundTransactionRequest{
+    SkipQueue: true,
+})
+```
+
 ### Getting a Transaction by Reference
 
 Look up a transaction using its unique reference string:
