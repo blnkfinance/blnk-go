@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 )
 
 func ValidateCreateTransacation(t CreateTransactionRequest) error {
@@ -98,6 +99,16 @@ func ValidateCreateBulkTransaction(b CreateBulkTransactionRequest) error {
 		refs[tx.Reference] = struct{}{}
 	}
 
+	return nil
+}
+
+func ValidateRecoverQueue(r RecoverQueueRequest) error {
+	if r.Threshold == "" {
+		return nil
+	}
+	if _, err := time.ParseDuration(r.Threshold); err != nil {
+		return fmt.Errorf("threshold must be a valid duration string (e.g. 5m, 1h)")
+	}
 	return nil
 }
 

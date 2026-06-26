@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Blnk Go SDK — Local Core Tests",
-    "description": "Click **Run** on this collection to verify Go SDK issues against local Blnk Core 0.14.5.\n\n**Setup:** import `go-sdk-local-core.postman_environment.json` and select it.\n\n**Folders:**\n- Issue #73 — Search identities resource type\n- Issue #36 — Transaction.GetLineage\n\nVariables are chained automatically between requests.",
+    "description": "Click **Run** on this collection to verify Go SDK issues against local Blnk Core 0.14.5.\n\n**Setup:** import `go-sdk-local-core.postman_environment.json` and select it.\n\n**Folders:**\n- Issue #40 — Transaction.RecoverQueue\n- Issue #73 — Search identities resource type\n- Issue #36 — Transaction.GetLineage\n\nVariables are chained automatically between requests (where needed).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -35,6 +35,79 @@
     }
   ],
   "item": [
+    {
+      "name": "Issue #40 — RecoverQueue",
+      "item": [
+        {
+          "name": "1. Recover queue (default threshold)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('recovered and threshold returned', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.recovered).to.be.a('number');",
+                  "    pm.expect(json.recovered).to.be.at.least(0);",
+                  "    pm.expect(json.threshold).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" }
+            ],
+            "url": "{{blnk_base_url}}/transactions/recover",
+            "description": "Go SDK: Transaction.RecoverQueue({})"
+          }
+        },
+        {
+          "name": "2. Recover queue (threshold=24h)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('threshold echo matches Core', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.recovered).to.be.a('number');",
+                  "    pm.expect(json.threshold).to.eql('24h0m0s');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" }
+            ],
+            "url": {
+              "raw": "{{blnk_base_url}}/transactions/recover?threshold=24h",
+              "host": ["{{blnk_base_url}}"],
+              "path": ["transactions", "recover"],
+              "query": [
+                { "key": "threshold", "value": "24h" }
+              ]
+            },
+            "description": "Go SDK: Transaction.RecoverQueue({ Threshold: \"24h\" })"
+          }
+        }
+      ]
+    },
     {
       "name": "Issue #73 — Search identities",
       "item": [
