@@ -139,3 +139,27 @@ func TestValidateCreateTransaction_ClassicDistributionStillWorks(t *testing.T) {
 	}
 	require.NoError(t, blnkgo.ValidateCreateTransacation(txn))
 }
+
+func TestValidateCreateTransaction_PreciseAmountWithClassicDistributionSkipsSumValidation(t *testing.T) {
+	// Pre-#71 behavior: when precise_amount is set without precise_distribution legs,
+	// SDK does not client-side validate distribution sums; Core is source of truth.
+	txn := baseSplitTxn()
+	txn.PreciseAmount = big.NewInt(100000)
+	txn.Destinations = []blnkgo.Source{
+		{Identifier: "bln_fee", Distribution: "50%"},
+		{Identifier: "bln_recipient", Distribution: "left"},
+	}
+	require.NoError(t, blnkgo.ValidateCreateTransacation(txn))
+}
+
+func TestValidateCreateTransaction_PreciseAmountWithPreciseDistributionStillValidated(t *testing.T) {
+	txn := baseSplitTxn()
+	txn.PreciseAmount = big.NewInt(10000)
+	txn.Destinations = []blnkgo.Source{
+		{Identifier: "bln_merchant", PreciseDistribution: "9733"},
+		{Identifier: "bln_fee", PreciseDistribution: "300"},
+	}
+	err := blnkgo.ValidateCreateTransacation(txn)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "does not equal")
+}

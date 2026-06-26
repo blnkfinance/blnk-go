@@ -39,13 +39,13 @@ func ValidateCreateTransacation(t CreateTransactionRequest) error {
 		return errors.New(sb.String())
 	}
 
-	if len(t.Sources) > 0 {
+	if len(t.Sources) > 0 && shouldValidateSplitLegSums(t, t.Sources) {
 		if err := validateSplitLegs(t.Sources, t, "source"); err != nil {
 			return err
 		}
 	}
 
-	if len(t.Destinations) > 0 {
+	if len(t.Destinations) > 0 && shouldValidateSplitLegSums(t, t.Destinations) {
 		if err := validateSplitLegs(t.Destinations, t, "destination"); err != nil {
 			return err
 		}
@@ -121,6 +121,29 @@ func ValidateRefundTransaction(r RefundTransactionRequest) error {
 
 func hasPreciseDistribution(leg Source) bool {
 	return leg.PreciseDistribution != ""
+}
+
+func legsUsePreciseDistribution(legs []Source) bool {
+	for _, leg := range legs {
+		if hasPreciseDistribution(leg) {
+			return true
+		}
+	}
+	return false
+}
+
+// shouldValidateSplitLegSums preserves pre-#71 behavior: when precise_amount is set
+// and no leg uses precise_distribution, Core remains the source of truth for
+// classic distribution splits. Validate sums only for amount-based splits or when
+// precise_distribution appears on any leg.
+func shouldValidateSplitLegSums(t CreateTransactionRequest, legs []Source) bool {
+	if legsUsePreciseDistribution(legs) {
+		return true
+	}
+	if t.PreciseAmount != nil && t.PreciseAmount.Cmp(big.NewInt(0)) != 0 {
+		return false
+	}
+	return true
 }
 
 func usesPreciseIntegerArithmetic(t CreateTransactionRequest) bool {

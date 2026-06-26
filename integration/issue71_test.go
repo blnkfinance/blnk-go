@@ -118,6 +118,49 @@ func TestIssue71_MixedDecimalPreciseDistributionAndLeft(t *testing.T) {
 	require.NotEmpty(t, txn.TransactionID)
 }
 
+func TestIssue71_PreciseAmountWithClassicDistribution_BackwardCompat(t *testing.T) {
+	client := newIntegrationClient(t)
+	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+
+	ledger, resp, err := client.Ledger.Create(blnkgo.CreateLedgerRequest{Name: "Issue71 Compat " + suffix})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	destA, resp, err := client.LedgerBalance.Create(blnkgo.CreateLedgerBalanceRequest{
+		LedgerID: ledger.LedgerID,
+		Currency: "USD",
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	destB, resp, err := client.LedgerBalance.Create(blnkgo.CreateLedgerBalanceRequest{
+		LedgerID: ledger.LedgerID,
+		Currency: "USD",
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	txn, resp, err := client.Transaction.Create(blnkgo.CreateTransactionRequest{
+		ParentTransaction: blnkgo.ParentTransaction{
+			PreciseAmount: big.NewInt(50000),
+			Reference:     "issue71-compat-" + suffix,
+			Precision:     100,
+			Currency:      "USD",
+			Source:        "@FundingPool",
+			Description:   "Issue 71 precise_amount classic distribution compat",
+			SkipQueue:     true,
+			Destinations: []blnkgo.Source{
+				{Identifier: destA.BalanceID, Distribution: "50%"},
+				{Identifier: destB.BalanceID, Distribution: "left"},
+			},
+		},
+		AllowOverdraft: true,
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+	require.NotEmpty(t, txn.TransactionID)
+}
+
 func TestIssue71_PreciseAmountWithPreciseDistributionLegs(t *testing.T) {
 	client := newIntegrationClient(t)
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
