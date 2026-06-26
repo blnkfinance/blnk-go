@@ -359,8 +359,8 @@ fmt.Printf("Recovered %d transactions (threshold %s)\n", result.Recovered, resul
 Refund by transaction ID. Omit the body to queue the refund (Core default), or pass `skip_queue: true` for synchronous processing:
 
 ```go
-// Queued refund (default)
-refund, resp, err := client.Transaction.Refund(originalTxnID, nil)
+// Queued refund (default) — existing callers keep working without a second argument
+refund, resp, err := client.Transaction.Refund(originalTxnID)
 
 // Synchronous refund
 refund, resp, err := client.Transaction.Refund(originalTxnID, &blnkgo.RefundTransactionRequest{

@@ -402,7 +402,7 @@ func TestRefundTransaction(t *testing.T) {
 		}
 	})
 
-	transaction, resp, err := svc.Refund("txn-123", nil)
+	transaction, resp, err := svc.Refund("txn-123")
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
@@ -450,7 +450,7 @@ func TestRefundTransaction_WithSkipQueue(t *testing.T) {
 func TestRefundTransaction_EmptyTransactionID(t *testing.T) {
 	mockClient, svc := setupTransactionService()
 
-	result, resp, err := svc.Refund("", nil)
+	result, resp, err := svc.Refund("")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "transactionID is required")
@@ -464,7 +464,7 @@ func TestRefundTransaction_FailedRequest(t *testing.T) {
 
 	mockClient.On("NewRequest", "refund-transaction/txn-123", http.MethodPost, nil).Return(nil, errors.New("failed to create request"))
 
-	transaction, resp, err := svc.Refund("txn-123", nil)
+	transaction, resp, err := svc.Refund("txn-123")
 
 	assert.Error(t, err)
 	assert.Nil(t, transaction)
@@ -481,7 +481,7 @@ func TestRefundTransaction_ClientError(t *testing.T) {
 	mockClient.On("NewRequest", "refund-transaction/txn-123", http.MethodPost, nil).Return(&http.Request{}, nil)
 	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusBadRequest}, errors.New("client error"))
 
-	transaction, resp, err := svc.Refund("txn-123", nil)
+	transaction, resp, err := svc.Refund("txn-123")
 
 	assert.Error(t, err)
 	assert.Nil(t, transaction)

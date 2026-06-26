@@ -44,10 +44,11 @@ func TestIssue70_Refund_QueuedDefault(t *testing.T) {
 	client := newIntegrationClient(t)
 	originalTxnID := createAppliedTransaction(t, client, "issue70-queued")
 
-	refund, resp, err := client.Transaction.Refund(originalTxnID, nil)
+	refund, resp, err := client.Transaction.Refund(originalTxnID)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
 	require.NotEmpty(t, refund.TransactionID)
+	require.Equal(t, originalTxnID, refund.ParentTransactionID)
 }
 
 func TestIssue70_Refund_SkipQueueSynchronous(t *testing.T) {
@@ -61,4 +62,23 @@ func TestIssue70_Refund_SkipQueueSynchronous(t *testing.T) {
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
 	require.NotEmpty(t, refund.TransactionID)
 	require.Equal(t, blnkgo.PryTransactionStatus("APPLIED"), refund.Status)
+	require.Equal(t, originalTxnID, refund.ParentTransactionID)
+}
+
+func TestIssue70_Refund_DuplicateRefundRejected(t *testing.T) {
+	client := newIntegrationClient(t)
+	originalTxnID := createAppliedTransaction(t, client, "issue70-dup")
+
+	_, resp, err := client.Transaction.Refund(originalTxnID, &blnkgo.RefundTransactionRequest{
+		SkipQueue: true,
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	_, dupResp, dupErr := client.Transaction.Refund(originalTxnID, &blnkgo.RefundTransactionRequest{
+		SkipQueue: true,
+	})
+	require.Error(t, dupErr)
+	require.NotNil(t, dupResp)
+	require.NotEqual(t, http.StatusCreated, dupResp.StatusCode)
 }

@@ -178,7 +178,7 @@
               { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" }
             ],
             "url": "{{blnk_base_url}}/refund-transaction/{{refund_source_txn_id}}",
-            "description": "Go SDK: Transaction.Refund(id, nil)"
+            "description": "Go SDK: Transaction.Refund(id)"
           }
         },
         {
