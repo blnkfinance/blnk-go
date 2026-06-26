@@ -200,6 +200,7 @@ func (c *Client) CallWithRetry(req *http.Request, resBody interface{}) (*http.Re
 		}
 
 		decodeErr := c.DecodeResponse(resp, resBody)
+		resp.Body.Close()
 		if decodeErr != nil {
 			return resp, decodeErr
 		}
