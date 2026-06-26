@@ -65,6 +65,37 @@ func TestIssue70_Refund_SkipQueueSynchronous(t *testing.T) {
 	require.Equal(t, originalTxnID, refund.ParentTransactionID)
 }
 
+func TestIssue70_Refund_ReversesSourceAndDestination(t *testing.T) {
+	client := newIntegrationClient(t)
+	ref := fmt.Sprintf("issue70-reversal-%d", time.Now().UnixNano())
+
+	original, resp, err := client.Transaction.Create(blnkgo.CreateTransactionRequest{
+		ParentTransaction: blnkgo.ParentTransaction{
+			Amount:      500,
+			Reference:   ref,
+			Precision:   100,
+			Currency:    "USD",
+			Source:      "@FundingPool",
+			Destination: "@Recipient",
+			Description: "Refund reversal integration tx",
+			SkipQueue:   true,
+		},
+		AllowOverdraft: true,
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	refund, resp, err := client.Transaction.Refund(original.TransactionID, &blnkgo.RefundTransactionRequest{
+		SkipQueue: true,
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+	require.Equal(t, original.Amount, refund.Amount)
+	require.Equal(t, original.Destination, refund.Source)
+	require.Equal(t, original.Source, refund.Destination)
+	require.Equal(t, original.TransactionID, refund.ParentTransactionID)
+}
+
 func TestIssue70_Refund_DuplicateRefundRejected(t *testing.T) {
 	client := newIntegrationClient(t)
 	originalTxnID := createAppliedTransaction(t, client, "issue70-dup")

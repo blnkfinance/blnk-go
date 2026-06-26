@@ -234,6 +234,9 @@ func (s *TransactionService) Refund(transactionID string, body ...*RefundTransac
 	if transactionID == "" {
 		return nil, nil, fmt.Errorf("transactionID is required")
 	}
+	if len(body) > 1 {
+		return nil, nil, fmt.Errorf("Refund accepts at most one optional request body")
+	}
 
 	var reqBody interface{}
 	if len(body) > 0 && body[0] != nil {
