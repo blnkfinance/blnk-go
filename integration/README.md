@@ -15,6 +15,7 @@ export BLNK_API_KEY=your_master_or_api_key
 go test -tags=integration -v ./integration/... -run Issue70
 go test -tags=integration -v ./integration/... -run Issue86
 go test -tags=integration -v ./integration/... -run Issue69
+go test -tags=integration -v ./integration/... -run Issue68
 go test -tags=integration -v ./integration/... -run Issue71
 go test -tags=integration -v ./integration/... -run Issue40
 go test -tags=integration -v ./integration/... -run Issue73
@@ -41,6 +42,7 @@ go test -tags=integration -v ./integration/...
 | #71 precise_distribution | 0.14.x+ | Split legs with precise_distribution on POST /transactions |
 | #86 update skip_queue | 0.14.x+ | skip_queue on inflight commit/void (Update + bulk) |
 | #69 balance from_source | 0.14.x+ | GET /balances/{id}?from_source=true |
+| #68 balance lineage create | 0.14.x+ | track_fund_lineage + allocation_strategy on POST /balances |
 | #73 search identities | 0.14.x+ | Not 0.15-only |
 | #36 transaction lineage | 0.14.x+ | Not 0.15-only |
 | 0.15-only features (delete identity, hooks, api-keys, etc.) | 0.15.0 | Test when we reach Go 1.3.0 issues |

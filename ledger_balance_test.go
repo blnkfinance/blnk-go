@@ -53,6 +53,66 @@ func TestLedgerBalanceService_Create_Success(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
+func TestLedgerBalanceService_Create_WithLineageFields(t *testing.T) {
+	mockClient, svc := setupLedgerBalanceService()
+
+	body := blnkgo.CreateLedgerBalanceRequest{
+		LedgerID:           "ledger123",
+		IdentityID:         "identity123",
+		Currency:           "USD",
+		TrackFundLineage:   true,
+		AllocationStrategy: blnkgo.AllocationStrategyPROPORTIONAL,
+	}
+
+	mockClient.On("NewRequest", "balances", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusCreated,
+	}, nil).Run(func(args mock.Arguments) {
+		ledgerBalance := args.Get(1).(*blnkgo.LedgerBalance)
+		ledgerBalance.BalanceID = "balance123"
+		ledgerBalance.TrackFundLineage = true
+		ledgerBalance.AllocationStrategy = blnkgo.AllocationStrategyPROPORTIONAL
+	})
+
+	ledgerBalance, resp, err := svc.Create(body)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.True(t, ledgerBalance.TrackFundLineage)
+	assert.Equal(t, blnkgo.AllocationStrategyPROPORTIONAL, ledgerBalance.AllocationStrategy)
+	mockClient.AssertExpectations(t)
+}
+
+func TestLedgerBalanceService_Create_InvalidAllocationStrategy(t *testing.T) {
+	mockClient, svc := setupLedgerBalanceService()
+
+	_, resp, err := svc.Create(blnkgo.CreateLedgerBalanceRequest{
+		LedgerID:           "ledger123",
+		Currency:           "USD",
+		AllocationStrategy: blnkgo.AllocationStrategy("INVALID"),
+	})
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	mockClient.AssertNotCalled(t, "NewRequest")
+	mockClient.AssertNotCalled(t, "CallWithRetry")
+}
+
+func TestLedgerBalanceService_Create_TrackFundLineageRequiresIdentity(t *testing.T) {
+	mockClient, svc := setupLedgerBalanceService()
+
+	_, resp, err := svc.Create(blnkgo.CreateLedgerBalanceRequest{
+		LedgerID:         "ledger123",
+		Currency:         "USD",
+		TrackFundLineage: true,
+	})
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	mockClient.AssertNotCalled(t, "NewRequest")
+	mockClient.AssertNotCalled(t, "CallWithRetry")
+}
+
 func TestLedgerBalanceService_Create_EmptyRequest(t *testing.T) {
 	mockClient, svc := setupLedgerBalanceService()
 	body := blnkgo.CreateLedgerBalanceRequest{}

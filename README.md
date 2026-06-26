@@ -208,6 +208,20 @@ if err != nil {
 fmt.Printf("Balance Created: %+v\n", newBalance)
 ```
 
+To enable fund lineage tracking on create, set `track_fund_lineage` (requires `identity_id`) and optionally `allocation_strategy`:
+
+```go
+balanceBody := blnkgo.CreateLedgerBalanceRequest{
+    LedgerID:           "ldg_073f7ffe-9dfd-42ce-aa50-d1dca1788adc",
+    IdentityID:         "idt_3b63c8da-af29-4cc3-ad38-df17d87456e6",
+    Currency:           "USD",
+    TrackFundLineage:   true,
+    AllocationStrategy: blnkgo.AllocationStrategyFIFO, // FIFO | LIFO | PROPORTIONAL
+}
+
+lineageBalance, resp, err := client.LedgerBalance.Create(balanceBody)
+```
+
 ### Retrieving a Balance (from source)
 
 By default, `Get` returns the stored balance snapshot. Pass `from_source: true` to reconstruct the balance from all transactions instead:

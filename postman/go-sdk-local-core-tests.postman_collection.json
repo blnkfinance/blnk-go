@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Blnk Go SDK — Local Core Tests",
-    "description": "Click **Run** on this collection to verify Go SDK issues against local Blnk Core 0.14.5.\n\n**Setup:** import `go-sdk-local-core.postman_environment.json` and select it.\n\n**Folders:**\n- Issue #40 — Transaction.RecoverQueue\n- Issue #70 — Transaction.Refund skip_queue\n- Issue #86 — UpdateStatus skip_queue\n- Issue #69 — LedgerBalance.Get from_source\n- Issue #71 — precise_distribution split legs\n- Issue #73 — Search identities resource type\n- Issue #36 — Transaction.GetLineage\n\nVariables are chained automatically between requests (where needed).",
+    "name": "Blnk Go SDK \u2014 Local Core Tests",
+    "description": "Click **Run** on this collection to verify Go SDK issues against local Blnk Core 0.14.5.\n\n**Setup:** import `go-sdk-local-core.postman_environment.json` and select it.\n\n**Folders:**\n- Issue #40 \u2014 Transaction.RecoverQueue\n- Issue #70 \u2014 Transaction.Refund skip_queue\n- Issue #86 \u2014 UpdateStatus skip_queue\n- Issue #69 \u2014 LedgerBalance.Get from_source\n- Issue #68 \u2014 Balance lineage create\n- Issue #71 \u2014 precise_distribution split legs\n- Issue #73 \u2014 Search identities resource type\n- Issue #36 \u2014 Transaction.GetLineage\n\nVariables are chained automatically between requests (where needed).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -56,7 +56,7 @@
   ],
   "item": [
     {
-      "name": "Issue #40 — RecoverQueue",
+      "name": "Issue #40 \u2014 RecoverQueue",
       "item": [
         {
           "name": "1. Recover queue (default threshold)",
@@ -83,7 +83,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              }
             ],
             "url": "{{blnk_base_url}}/transactions/recover",
             "description": "Go SDK: Transaction.RecoverQueue({})"
@@ -113,14 +116,25 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              }
             ],
             "url": {
               "raw": "{{blnk_base_url}}/transactions/recover?threshold=24h",
-              "host": ["{{blnk_base_url}}"],
-              "path": ["transactions", "recover"],
+              "host": [
+                "{{blnk_base_url}}"
+              ],
+              "path": [
+                "transactions",
+                "recover"
+              ],
               "query": [
-                { "key": "threshold", "value": "24h" }
+                {
+                  "key": "threshold",
+                  "value": "24h"
+                }
               ]
             },
             "description": "Go SDK: Transaction.RecoverQueue({ Threshold: \"24h\" })"
@@ -129,7 +143,7 @@
       ]
     },
     {
-      "name": "Issue #70 — Refund skip_queue",
+      "name": "Issue #70 \u2014 Refund skip_queue",
       "item": [
         {
           "name": "1. Create applied transaction (seed)",
@@ -162,8 +176,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -195,7 +215,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              }
             ],
             "url": "{{blnk_base_url}}/refund-transaction/{{refund_source_txn_id}}",
             "description": "Go SDK: Transaction.Refund(id)"
@@ -231,8 +254,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -264,8 +293,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -278,7 +313,7 @@
       ]
     },
     {
-      "name": "Issue #86 — UpdateStatus skip_queue",
+      "name": "Issue #86 \u2014 UpdateStatus skip_queue",
       "item": [
         {
           "name": "1. Create inflight transaction (seed)",
@@ -311,8 +346,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -344,8 +385,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -385,8 +432,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -418,8 +471,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -432,7 +491,169 @@
       ]
     },
     {
-      "name": "Issue #69 — Balance Get from_source",
+      "name": "Issue #68 \u2014 Balance lineage create",
+      "item": [
+        {
+          "name": "1. Create ledger",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('issue68_ledger_id', json.ledger_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Go SDK Issue 68\"\n}"
+            },
+            "url": "{{blnk_base_url}}/ledgers"
+          }
+        },
+        {
+          "name": "2. Create identity (seed)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('issue68_email', `issue68-${Date.now()}@example.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('issue68_identity_id', json.identity_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identity_type\": \"individual\",\n  \"first_name\": \"GoSDK\",\n  \"last_name\": \"Lineage\",\n  \"email_address\": \"{{issue68_email}}\",\n  \"phone_number\": \"1234567890\",\n  \"category\": \"customer\",\n  \"street\": \"123 Main St\",\n  \"country\": \"USA\",\n  \"state\": \"CA\",\n  \"post_code\": \"90001\",\n  \"city\": \"Los Angeles\",\n  \"dob\": \"1990-01-15T00:00:00Z\",\n  \"gender\": \"Male\",\n  \"nationality\": \"American\"\n}"
+            },
+            "url": "{{blnk_base_url}}/identities"
+          }
+        },
+        {
+          "name": "3. Create balance with lineage",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.expect(json.track_fund_lineage).to.eql(true);",
+                  "pm.expect(json.allocation_strategy).to.eql('PROPORTIONAL');",
+                  "pm.collectionVariables.set('issue68_balance_id', json.balance_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ledger_id\": \"{{issue68_ledger_id}}\",\n  \"identity_id\": \"{{issue68_identity_id}}\",\n  \"currency\": \"USD\",\n  \"track_fund_lineage\": true,\n  \"allocation_strategy\": \"PROPORTIONAL\"\n}"
+            },
+            "url": "{{blnk_base_url}}/balances",
+            "description": "Go SDK: LedgerBalance.Create with TrackFundLineage + AllocationStrategy"
+          }
+        },
+        {
+          "name": "4. GET balance lineage fields",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "pm.test('track_fund_lineage persisted', function () {",
+                  "    pm.expect(json.track_fund_lineage).to.eql(true);",
+                  "});",
+                  "pm.test('allocation_strategy persisted', function () {",
+                  "    pm.expect(json.allocation_strategy).to.eql('PROPORTIONAL');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              }
+            ],
+            "url": "{{blnk_base_url}}/balances/{{issue68_balance_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issue #69 \u2014 Balance Get from_source",
       "item": [
         {
           "name": "1. Create ledger",
@@ -455,8 +676,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -486,8 +713,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -517,8 +750,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -554,8 +793,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -593,7 +838,10 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              }
             ],
             "url": "{{blnk_base_url}}/balances/{{issue69_dest_id}}?from_source=true",
             "description": "Go SDK: LedgerBalance.Get(balanceID, &GetBalanceRequest{FromSource: true})"
@@ -602,7 +850,7 @@
       ]
     },
     {
-      "name": "Issue #71 — precise_distribution split legs",
+      "name": "Issue #71 \u2014 precise_distribution split legs",
       "item": [
         {
           "name": "1. Create ledger",
@@ -625,8 +873,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -656,8 +910,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -687,8 +947,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -729,8 +995,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -763,7 +1035,10 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              }
             ],
             "url": "{{blnk_base_url}}/balances/{{issue71_merchant_id}}"
           }
@@ -791,7 +1066,10 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              }
             ],
             "url": "{{blnk_base_url}}/balances/{{issue71_fee_id}}"
           }
@@ -817,8 +1095,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -859,8 +1143,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -873,7 +1163,7 @@
       ]
     },
     {
-      "name": "Issue #73 — Search identities",
+      "name": "Issue #73 \u2014 Search identities",
       "item": [
         {
           "name": "1. Create identity (seed)",
@@ -909,8 +1199,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -952,8 +1248,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -966,7 +1268,7 @@
       ]
     },
     {
-      "name": "Issue #36 — Transaction GetLineage",
+      "name": "Issue #36 \u2014 Transaction GetLineage",
       "item": [
         {
           "name": "1. Create ledger",
@@ -989,8 +1291,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1020,8 +1328,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1051,8 +1365,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1092,8 +1412,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1126,7 +1452,10 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "X-Blnk-Key", "value": "{{blnk_api_key}}" }
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              }
             ],
             "url": "{{blnk_base_url}}/transactions/{{transaction_id}}/lineage",
             "description": "Go SDK: Transaction.GetLineage(transactionID)"
