@@ -1,0 +1,27 @@
+---
+description: Blnk Go SDK workflow — no Postman in git, integration tests only
+alwaysApply: true
+---
+
+# Blnk Go SDK workflow
+
+## Postman — never commit
+
+- Postman collections are for **local personal testing only**
+- **Do NOT** add, update, or commit `postman/` in blnk-go PRs
+- **Do NOT** use Postman MCP to sync collections into the repo
+- **Do NOT** add Postman folders to PR descriptions unless the user explicitly asks
+- Keep local Postman files in `manual/postman/` (gitignored)
+- Verify against Core with: `go test -tags=integration -run IssueXX ./integration/...`
+
+## PR scope (blnk-go)
+
+- SDK code + unit tests (`*_test.go` at package root)
+- Integration tests (`integration/issueXX_test.go`)
+- README SDK usage examples only
+- No Postman, no `manual/` artifacts
+
+## Git
+
+- Only commit when the user explicitly asks
+- Never push `postman/` or `manual/`
