@@ -9,22 +9,23 @@ import (
 type IdentityService service
 
 type Identity struct {
-	IdentityType     IdentityType           `json:"identity_type"`
+	IdentityID       string                 `json:"identity_id,omitempty"`
+	IdentityType     IdentityType           `json:"identity_type,omitempty"`
 	FirstName        string                 `json:"first_name,omitempty"`
 	LastName         string                 `json:"last_name,omitempty"`
 	OtherNames       string                 `json:"other_names,omitempty"`
 	Gender           string                 `json:"gender,omitempty"`
 	DOB              *time.Time             `json:"dob,omitempty"`
-	EmailAddress     string                 `json:"email_address"`
-	PhoneNumber      string                 `json:"phone_number"`
+	EmailAddress     string                 `json:"email_address,omitempty"`
+	PhoneNumber      string                 `json:"phone_number,omitempty"`
 	Nationality      string                 `json:"nationality,omitempty"`
 	OrganizationName string                 `json:"organization_name,omitempty"`
-	Category         string                 `json:"category"`
-	Street           string                 `json:"street"`
-	Country          string                 `json:"country"`
-	State            string                 `json:"state"`
-	PostCode         string                 `json:"post_code"`
-	City             string                 `json:"city"`
+	Category         string                 `json:"category,omitempty"`
+	Street           string                 `json:"street,omitempty"`
+	Country          string                 `json:"country,omitempty"`
+	State            string                 `json:"state,omitempty"`
+	PostCode         string                 `json:"post_code,omitempty"`
+	City             string                 `json:"city,omitempty"`
 	MetaData         map[string]interface{} `json:"meta_data,omitempty"`
 }
 

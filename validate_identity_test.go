@@ -1,0 +1,90 @@
+package blnkgo_test
+
+import (
+	"encoding/json"
+	"testing"
+
+	blnkgo "github.com/blnkfinance/blnk-go"
+	"github.com/stretchr/testify/require"
+)
+
+func TestValidateCreateIdentity_MinimalIndividual(t *testing.T) {
+	require.NoError(t, blnkgo.ValidateCreateIdentity(blnkgo.Identity{
+		IdentityType: blnkgo.Individual,
+		FirstName:    "Jane",
+		Category:     "customer",
+	}))
+}
+
+func TestValidateCreateIdentity_MinimalOrganization(t *testing.T) {
+	require.NoError(t, blnkgo.ValidateCreateIdentity(blnkgo.Identity{
+		IdentityType:     blnkgo.Organization,
+		OrganizationName: "ACME Inc",
+	}))
+}
+
+func TestValidateCreateIdentity_CallerSuppliedIdentityID(t *testing.T) {
+	require.NoError(t, blnkgo.ValidateCreateIdentity(blnkgo.Identity{
+		IdentityID:   "idt_8c5a8e2f-3f1d-5a9b-9c3e-4d8f1e5a7b2c",
+		IdentityType: blnkgo.Individual,
+		FirstName:    "Caller",
+	}))
+}
+
+func TestValidateCreateIdentity_InvalidIdentityType(t *testing.T) {
+	err := blnkgo.ValidateCreateIdentity(blnkgo.Identity{
+		IdentityType: blnkgo.IdentityType("business"),
+		FirstName:    "Jane",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid identity_type")
+}
+
+func TestValidateCreateIdentity_InvalidIdentityIDPrefix(t *testing.T) {
+	err := blnkgo.ValidateCreateIdentity(blnkgo.Identity{
+		IdentityID: "user_8c5a8e2f-3f1d-5a9b-9c3e-4d8f1e5a7b2c",
+		FirstName:  "Jane",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "idt_")
+}
+
+func TestValidateCreateIdentity_InvalidIdentityIDSuffix(t *testing.T) {
+	err := blnkgo.ValidateCreateIdentity(blnkgo.Identity{
+		IdentityID: "idt_not-a-uuid",
+		FirstName:  "Jane",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "valid UUID")
+}
+
+func TestIdentity_JSONMarshal_CallerSuppliedIdentityID(t *testing.T) {
+	body := blnkgo.Identity{
+		IdentityID:   "idt_8c5a8e2f-3f1d-5a9b-9c3e-4d8f1e5a7b2c",
+		IdentityType: blnkgo.Individual,
+		FirstName:    "Jane",
+	}
+	payload, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	var decoded map[string]interface{}
+	require.NoError(t, json.Unmarshal(payload, &decoded))
+	require.Equal(t, "idt_8c5a8e2f-3f1d-5a9b-9c3e-4d8f1e5a7b2c", decoded["identity_id"])
+	require.Equal(t, "individual", decoded["identity_type"])
+}
+
+func TestIdentity_JSONMarshal_OmitsEmptyOptionalFields(t *testing.T) {
+	body := blnkgo.Identity{
+		IdentityType: blnkgo.Individual,
+		FirstName:    "Jane",
+	}
+	payload, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	var decoded map[string]interface{}
+	require.NoError(t, json.Unmarshal(payload, &decoded))
+	require.NotContains(t, decoded, "identity_id")
+	require.NotContains(t, decoded, "dob")
+	require.NotContains(t, decoded, "gender")
+	require.NotContains(t, decoded, "nationality")
+}

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Blnk Go SDK \u2014 Local Core Tests",
-    "description": "Click **Run** on this collection to verify Go SDK issues against local Blnk Core 0.14.5.\n\n**Setup:** import `go-sdk-local-core.postman_environment.json` and select it.\n\n**Folders:**\n- Issue #40 \u2014 Transaction.RecoverQueue\n- Issue #70 \u2014 Transaction.Refund skip_queue\n- Issue #86 \u2014 UpdateStatus skip_queue\n- Issue #69 \u2014 LedgerBalance.Get from_source\n- Issue #68 \u2014 Balance lineage create\n- Issue #71 \u2014 precise_distribution split legs\n- Issue #73 \u2014 Search identities resource type\n- Issue #36 \u2014 Transaction.GetLineage\n\nVariables are chained automatically between requests (where needed).",
+    "description": "Click **Run** on this collection to verify Go SDK issues against local Blnk Core 0.14.5.\n\n**Setup:** import `go-sdk-local-core.postman_environment.json` and select it.\n\n**Folders:**\n- Issue #40 \u2014 Transaction.RecoverQueue\n- Issue #70 \u2014 Transaction.Refund skip_queue\n- Issue #86 \u2014 UpdateStatus skip_queue\n- Issue #69 \u2014 LedgerBalance.Get from_source\n- Issue #68 \u2014 Balance lineage create\n- Issue #71 \u2014 precise_distribution split legs\n- Issue #72 \u2014 Identity optional identity_id\n- Issue #73 \u2014 Search identities resource type\n- Issue #36 \u2014 Transaction.GetLineage\n\nVariables are chained automatically between requests (where needed).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -51,6 +51,10 @@
     },
     {
       "key": "issue86_void_txn_id",
+      "value": ""
+    },
+    {
+      "key": "issue72_caller_id",
       "value": ""
     }
   ],
@@ -1158,6 +1162,144 @@
             },
             "url": "{{blnk_base_url}}/transactions",
             "description": "Go SDK: mixed decimal %, precise_distribution, and left on split legs"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issue #72 \u2014 Identity optional id",
+      "item": [
+        {
+          "name": "1. Create identity (caller identity_id)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const id = 'idt_' + crypto.randomUUID();",
+                  "pm.collectionVariables.set('issue72_caller_id', id);",
+                  "pm.collectionVariables.set('issue72_email', `go-sdk-72-${Date.now()}@example.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('caller identity_id preserved', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.identity_id).to.eql(pm.collectionVariables.get('issue72_caller_id'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identity_id\": \"{{issue72_caller_id}}\",\n  \"identity_type\": \"individual\",\n  \"first_name\": \"CallerID\",\n  \"email_address\": \"{{issue72_email}}\",\n  \"category\": \"customer\"\n}"
+            },
+            "url": "{{blnk_base_url}}/identities",
+            "description": "Go SDK: Identity.Create with caller-supplied identity_id"
+          }
+        },
+        {
+          "name": "2. Get identity by caller id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('identity matches caller id', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.identity_id).to.eql(pm.collectionVariables.get('issue72_caller_id'));",
+                  "    pm.expect(json.first_name).to.eql('CallerID');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              }
+            ],
+            "url": "{{blnk_base_url}}/identities/{{issue72_caller_id}}",
+            "description": "Verify caller-supplied identity_id round-trips"
+          }
+        },
+        {
+          "name": "3. Create minimal identity (no dob/gender/nationality)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('issue72_min_email', `go-sdk-72-min-${Date.now()}@example.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('identity_id generated', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.identity_id).to.match(/^idt_[0-9a-f-]+$/i);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Blnk-Key",
+                "value": "{{blnk_api_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identity_type\": \"individual\",\n  \"first_name\": \"Minimal\",\n  \"email_address\": \"{{issue72_min_email}}\",\n  \"category\": \"customer\"\n}"
+            },
+            "url": "{{blnk_base_url}}/identities",
+            "description": "Minimal create payload accepted by Core (relaxed SDK validation)"
           }
         }
       ]
