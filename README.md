@@ -208,6 +208,24 @@ if err != nil {
 fmt.Printf("Balance Created: %+v\n", newBalance)
 ```
 
+### Retrieving a Balance (from source)
+
+By default, `Get` returns the stored balance snapshot. Pass `from_source: true` to reconstruct the balance from all transactions instead:
+
+```go
+balance, resp, err := client.LedgerBalance.Get(newBalance.BalanceID, &blnkgo.GetBalanceRequest{
+    FromSource: true,
+})
+if err != nil {
+    fmt.Printf("Error fetching balance from source: %v\n", err)
+    return
+}
+
+fmt.Printf("Balance from source: %+v\n", balance)
+```
+
+Existing callers can keep using `client.LedgerBalance.Get(balanceID)` with no second argument.
+
 ### Viewing Balance Lineage
 
 For balances with fund lineage tracking enabled, retrieve the provider breakdown (received, spent, available):

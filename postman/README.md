@@ -22,6 +22,7 @@ Import these two files into Postman (one-time):
 | **Issue #70 — Refund skip_queue** | `POST /refund-transaction/{id}` | 0.14.5+ |
 | **Issue #71 — precise_distribution** | `POST /transactions` split legs | 0.14.5+ |
 | **Issue #86 — Update skip_queue** | `PUT /transactions/inflight/{id}` + bulk commit/void | 0.14.5+ |
+| **Issue #69 — Balance from_source** | `GET /balances/{id}?from_source=true` | 0.14.5+ |
 
 ## CLI (same tests, no Postman UI)
 
