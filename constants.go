@@ -99,6 +99,7 @@ const (
 	Ledgers      ResourceType = "ledgers"
 	Transactions ResourceType = "transactions"
 	Balances     ResourceType = "balances"
+	Identities   ResourceType = "identities"
 )
 
 type CriteriaField string
