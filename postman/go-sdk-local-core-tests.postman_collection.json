@@ -531,6 +531,15 @@
           "name": "4. Fund destination",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('issue69_ref', `issue69-fund-${Date.now()}`);"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -550,7 +559,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"amount\": 500,\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"source\": \"{{issue69_source_id}}\",\n  \"destination\": \"{{issue69_dest_id}}\",\n  \"reference\": \"issue69-fund\",\n  \"allow_overdraft\": true,\n  \"skip_queue\": true\n}"
+              "raw": "{\n  \"amount\": 500,\n  \"precision\": 100,\n  \"currency\": \"USD\",\n  \"source\": \"{{issue69_source_id}}\",\n  \"destination\": \"{{issue69_dest_id}}\",\n  \"reference\": \"{{issue69_ref}}\",\n  \"description\": \"Issue #69 fund destination\",\n  \"allow_overdraft\": true,\n  \"skip_queue\": true\n}"
             },
             "url": "{{blnk_base_url}}/transactions"
           }
