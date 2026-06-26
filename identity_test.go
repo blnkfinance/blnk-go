@@ -367,3 +367,120 @@ func TestIdentityService_Create_InvalidIdentityType(t *testing.T) {
 	assert.Nil(t, resp)
 	assert.Nil(t, httpResp)
 }
+
+func TestIdentityService_Filter_Success(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	body := blnkgo.FilterParams{
+		Filters: []blnkgo.Filter{
+			{Field: "email_address", Operator: blnkgo.OpEqual, Value: "john@example.com"},
+		},
+		Limit: 10,
+	}
+
+	expectedResponse := &blnkgo.FilterResponse{
+		Data: []blnkgo.IdentityResponse{
+			{
+				IdentityId: "idt_1",
+				Identity: blnkgo.Identity{
+					IdentityType: blnkgo.Individual,
+					FirstName:  "John",
+					LastName:   "Doe",
+					EmailAddress: "john@example.com",
+					Category:   "customer",
+				},
+			},
+		},
+	}
+
+	mockClient.On("NewRequest", "identities/filter", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusOK,
+	}, nil).Run(func(args mock.Arguments) {
+		result := args.Get(1).(*blnkgo.FilterResponse)
+		*result = *expectedResponse
+	})
+
+	result, resp, err := svc.Filter(body)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	mockClient.AssertExpectations(t)
+}
+
+func TestIdentityService_Filter_WithIncludeCount(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	body := blnkgo.FilterParams{
+		Filters: []blnkgo.Filter{
+			{Field: "category", Operator: blnkgo.OpEqual, Value: "customer"},
+		},
+		IncludeCount: true,
+	}
+
+	count := int64(1)
+	expectedResponse := &blnkgo.FilterResponse{
+		Data: []blnkgo.IdentityResponse{
+			{IdentityId: "idt_1"},
+		},
+		TotalCount: &count,
+	}
+
+	mockClient.On("NewRequest", "identities/filter", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusOK,
+	}, nil).Run(func(args mock.Arguments) {
+		result := args.Get(1).(*blnkgo.FilterResponse)
+		*result = *expectedResponse
+	})
+
+	result, resp, err := svc.Filter(body)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result.TotalCount)
+	assert.Equal(t, int64(1), *result.TotalCount)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	mockClient.AssertExpectations(t)
+}
+
+func TestIdentityService_Filter_NewRequestError(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	body := blnkgo.FilterParams{
+		Filters: []blnkgo.Filter{
+			{Field: "first_name", Operator: blnkgo.OpEqual, Value: "Jane"},
+		},
+	}
+
+	mockClient.On("NewRequest", "identities/filter", http.MethodPost, body).Return(nil, fmt.Errorf("request error"))
+
+	result, resp, err := svc.Filter(body)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Nil(t, resp)
+	mockClient.AssertExpectations(t)
+}
+
+func TestIdentityService_Filter_ServerError(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	body := blnkgo.FilterParams{
+		Filters: []blnkgo.Filter{
+			{Field: "first_name", Operator: blnkgo.OpEqual, Value: "Jane"},
+		},
+	}
+
+	expectedResp := &http.Response{StatusCode: http.StatusInternalServerError}
+	mockClient.On("NewRequest", "identities/filter", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(expectedResp, fmt.Errorf("server error"))
+
+	result, resp, err := svc.Filter(body)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Equal(t, expectedResp, resp)
+	mockClient.AssertExpectations(t)
+}

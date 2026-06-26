@@ -659,6 +659,30 @@ identity, resp, err := client.Identity.Create(identityBody)
 
 Only `identity_type` (when set) and `identity_id` format are validated client-side; other fields are optional per the API reference.
 
+Filter identities with structured query filters:
+
+```go
+result, resp, err := client.Identity.Filter(blnkgo.FilterParams{
+    Filters: []blnkgo.Filter{
+        {Field: "email_address", Operator: blnkgo.OpEqual, Value: "john.doe@example.com"},
+        {Field: "category", Operator: blnkgo.OpEqual, Value: "customer"},
+    },
+    Limit:        20,
+    Offset:       0,
+    IncludeCount: true,
+})
+if err != nil {
+    fmt.Printf("Error filtering identities: %v\n", err)
+    return
+}
+
+fmt.Printf("Filter status: %d\n", resp.StatusCode)
+if result.TotalCount != nil {
+    fmt.Printf("Total matches: %d\n", *result.TotalCount)
+}
+fmt.Printf("Data: %+v\n", result.Data)
+```
+
 ### Reconciliation
 
 The reconciliation feature allows you to match and verify transactions against external data sources.
