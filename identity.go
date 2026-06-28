@@ -74,6 +74,17 @@ type DetokenizeFieldResponse struct {
 	Value string `json:"value"`
 }
 
+// DetokenizeRequest is the body for POST /identities/{id}/detokenize.
+// Pass an empty fields slice to detokenize all currently tokenized fields.
+type DetokenizeRequest struct {
+	Fields []TokenizableIdentityField `json:"fields"`
+}
+
+// DetokenizeResponse returns original field values keyed by field name.
+type DetokenizeResponse struct {
+	Fields map[string]string `json:"fields"`
+}
+
 func (s *IdentityService) Create(identity Identity) (*IdentityResponse, *http.Response, error) {
 	//validate the identity
 	if err := ValidateCreateIdentity(identity); err != nil {
@@ -223,6 +234,27 @@ func (s *IdentityService) DetokenizeField(identityID string, field string) (*Det
 	}
 
 	detokenizeResp := new(DetokenizeFieldResponse)
+	resp, err := s.client.CallWithRetry(req, detokenizeResp)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return detokenizeResp, resp, nil
+}
+
+// Detokenize detokenizes multiple PII fields and returns the original values.
+func (s *IdentityService) Detokenize(identityID string, body DetokenizeRequest) (*DetokenizeResponse, *http.Response, error) {
+	if err := ValidateDetokenizeIdentityRequest(identityID, body); err != nil {
+		return nil, nil, err
+	}
+
+	u := fmt.Sprintf("identities/%s/detokenize", identityID)
+	req, err := s.client.NewRequest(u, http.MethodPost, body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	detokenizeResp := new(DetokenizeResponse)
 	resp, err := s.client.CallWithRetry(req, detokenizeResp)
 	if err != nil {
 		return nil, resp, err

@@ -745,3 +745,100 @@ func TestIdentityService_DetokenizeField_RequestCreationFailure(t *testing.T) {
 	assert.Nil(t, httpResp)
 	mockClient.AssertExpectations(t)
 }
+
+func TestIdentityService_Detokenize_Success(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	identityID := "idt_573ebcc9-4da0-4295-82dc-0fb152b56660"
+	body := blnkgo.DetokenizeRequest{
+		Fields: []blnkgo.TokenizableIdentityField{
+			blnkgo.TokenizableFieldFirstName,
+			blnkgo.TokenizableFieldEmailAddress,
+		},
+	}
+	path := "identities/" + identityID + "/detokenize"
+
+	mockClient.On("NewRequest", path, http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.DetokenizeResponse)
+		*resp = blnkgo.DetokenizeResponse{
+			Fields: map[string]string{
+				"FirstName":    "Jane",
+				"EmailAddress": "jane@example.com",
+			},
+		}
+	})
+
+	detokenized, httpResp, err := svc.Detokenize(identityID, body)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Equal(t, "Jane", detokenized.Fields["FirstName"])
+	assert.Equal(t, "jane@example.com", detokenized.Fields["EmailAddress"])
+	mockClient.AssertExpectations(t)
+}
+
+func TestIdentityService_Detokenize_EmptyFields(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	identityID := "idt_test_123"
+	body := blnkgo.DetokenizeRequest{Fields: []blnkgo.TokenizableIdentityField{}}
+	path := "identities/" + identityID + "/detokenize"
+
+	mockClient.On("NewRequest", path, http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.DetokenizeResponse)
+		*resp = blnkgo.DetokenizeResponse{
+			Fields: map[string]string{
+				"FirstName":    "Jane",
+				"EmailAddress": "jane@example.com",
+			},
+		}
+	})
+
+	detokenized, httpResp, err := svc.Detokenize(identityID, body)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Len(t, detokenized.Fields, 2)
+	mockClient.AssertExpectations(t)
+}
+
+func TestIdentityService_Detokenize_ValidationErrorEmptyID(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	body := blnkgo.DetokenizeRequest{Fields: []blnkgo.TokenizableIdentityField{blnkgo.TokenizableFieldFirstName}}
+	_, _, err := svc.Detokenize("", body)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "identity id is required")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestIdentityService_Detokenize_ValidationErrorNilFields(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	_, _, err := svc.Detokenize("idt_test_123", blnkgo.DetokenizeRequest{})
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "fields must be an array")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestIdentityService_Detokenize_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	identityID := "idt_test_123"
+	body := blnkgo.DetokenizeRequest{Fields: []blnkgo.TokenizableIdentityField{blnkgo.TokenizableFieldPhoneNumber}}
+	path := "identities/" + identityID + "/detokenize"
+
+	mockClient.On("NewRequest", path, http.MethodPost, body).Return(nil, errors.New("failed to create request"))
+
+	detokenized, httpResp, err := svc.Detokenize(identityID, body)
+
+	assert.Error(t, err)
+	assert.Nil(t, detokenized)
+	assert.Nil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}

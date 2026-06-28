@@ -737,6 +737,21 @@ if err != nil {
 fmt.Println(detokenized.Field, detokenized.Value)
 ```
 
+Detokenize multiple fields (pass an empty `fields` slice to detokenize all tokenized fields):
+
+```go
+detokenized, resp, err := client.Identity.Detokenize(identity.IdentityId, blnkgo.DetokenizeRequest{
+    Fields: []blnkgo.TokenizableIdentityField{
+        blnkgo.TokenizableFieldFirstName,
+        blnkgo.TokenizableFieldEmailAddress,
+    },
+})
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(detokenized.Fields["FirstName"], detokenized.Fields["EmailAddress"])
+```
+
 ### Reconciliation
 
 The reconciliation feature allows you to match and verify transactions against external data sources.

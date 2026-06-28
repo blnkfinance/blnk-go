@@ -126,3 +126,19 @@ func TestValidateTokenizeIdentityRequest(t *testing.T) {
 		Fields: []blnkgo.TokenizableIdentityField{""},
 	}))
 }
+
+func TestValidateDetokenizeIdentityRequest(t *testing.T) {
+	body := blnkgo.DetokenizeRequest{
+		Fields: []blnkgo.TokenizableIdentityField{
+			blnkgo.TokenizableFieldFirstName,
+			blnkgo.TokenizableFieldEmailAddress,
+		},
+	}
+	require.NoError(t, blnkgo.ValidateDetokenizeIdentityRequest("idt_test_123", body))
+	require.NoError(t, blnkgo.ValidateDetokenizeIdentityRequest("idt_test_123", blnkgo.DetokenizeRequest{Fields: []blnkgo.TokenizableIdentityField{}}))
+	require.Error(t, blnkgo.ValidateDetokenizeIdentityRequest("", body))
+	require.Error(t, blnkgo.ValidateDetokenizeIdentityRequest("idt_test_123", blnkgo.DetokenizeRequest{}))
+	require.Error(t, blnkgo.ValidateDetokenizeIdentityRequest("idt_test_123", blnkgo.DetokenizeRequest{
+		Fields: []blnkgo.TokenizableIdentityField{""},
+	}))
+}
