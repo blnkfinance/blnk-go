@@ -63,6 +63,11 @@ type TokenizeResponse struct {
 	Message string `json:"message"`
 }
 
+// GetTokenizedFieldsResponse lists fields currently tokenized on an identity.
+type GetTokenizedFieldsResponse struct {
+	TokenizedFields []TokenizableIdentityField `json:"tokenized_fields"`
+}
+
 func (s *IdentityService) Create(identity Identity) (*IdentityResponse, *http.Response, error) {
 	//validate the identity
 	if err := ValidateCreateIdentity(identity); err != nil {
@@ -176,6 +181,27 @@ func (s *IdentityService) Tokenize(identityID string, body TokenizeRequest) (*To
 	}
 
 	return tokenizeResp, resp, nil
+}
+
+// GetTokenizedFields returns the list of fields currently tokenized on an identity.
+func (s *IdentityService) GetTokenizedFields(identityID string) (*GetTokenizedFieldsResponse, *http.Response, error) {
+	if err := ValidateIdentityID(identityID); err != nil {
+		return nil, nil, err
+	}
+
+	u := fmt.Sprintf("identities/%s/tokenized-fields", identityID)
+	req, err := s.client.NewRequest(u, http.MethodGet, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	fieldsResp := new(GetTokenizedFieldsResponse)
+	resp, err := s.client.CallWithRetry(req, fieldsResp)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return fieldsResp, resp, nil
 }
 
 func NewIdentityService(client ClientInterface) *IdentityService {

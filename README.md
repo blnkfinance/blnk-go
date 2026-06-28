@@ -712,6 +712,18 @@ if err != nil {
 fmt.Println(tokenized.Message) // Fields tokenized successfully
 ```
 
+List fields currently tokenized on an identity:
+
+```go
+fields, resp, err := client.Identity.GetTokenizedFields(identity.IdentityId)
+if err != nil {
+    log.Fatal(err)
+}
+for _, field := range fields.TokenizedFields {
+    fmt.Println(field) // e.g. FirstName, EmailAddress
+}
+```
+
 ### Reconciliation
 
 The reconciliation feature allows you to match and verify transactions against external data sources.
