@@ -174,3 +174,57 @@ func TestHooksService_Update_RequestCreationFailure(t *testing.T) {
 	assert.Nil(t, httpResp)
 	mockClient.AssertExpectations(t)
 }
+
+func TestHooksService_Get_Success(t *testing.T) {
+	mockClient, svc := setupHooksService()
+
+	hookID := "hk_test_123"
+	mockClient.On("NewRequest", "hooks/"+hookID, http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.HookResponse)
+		*resp = blnkgo.HookResponse{
+			ID:          hookID,
+			Name:        "Pre-transaction validation",
+			URL:         "https://api.example.com/validate",
+			Type:        blnkgo.HookTypePreTransaction,
+			Active:      true,
+			Timeout:     30,
+			RetryCount:  3,
+			CreatedAt:   "2024-11-26T08:36:36.238244338Z",
+			LastRun:     "0001-01-01T00:00:00Z",
+			LastSuccess: false,
+		}
+	})
+
+	hook, httpResp, err := svc.Get(hookID)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Equal(t, hookID, hook.ID)
+	mockClient.AssertExpectations(t)
+}
+
+func TestHooksService_Get_ValidationError(t *testing.T) {
+	mockClient, svc := setupHooksService()
+
+	_, _, err := svc.Get("")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "hook id is required")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestHooksService_Get_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupHooksService()
+
+	hookID := "hk_test_123"
+	mockClient.On("NewRequest", "hooks/"+hookID, http.MethodGet, nil).Return(nil, errors.New("failed to create request"))
+
+	hook, httpResp, err := svc.Get(hookID)
+
+	assert.Error(t, err)
+	assert.Nil(t, hook)
+	assert.Nil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}

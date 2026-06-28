@@ -887,6 +887,16 @@ if err != nil {
 fmt.Println("Updated hook:", updated.Name)
 ```
 
+View a hook by ID:
+
+```go
+hook, resp, err := client.Hooks.Get("hk_test_123")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println("Hook:", hook.Name, hook.Active)
+```
+
 ### Search
 
 Search across ledgers, balances, and transactions with flexible query parameters.
