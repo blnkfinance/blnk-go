@@ -65,3 +65,19 @@ func ValidateTokenizeIdentityRequest(identityID string, body TokenizeRequest) er
 	}
 	return nil
 }
+
+// ValidateDetokenizeIdentityRequest performs client-side checks before POST /identities/{id}/detokenize.
+func ValidateDetokenizeIdentityRequest(identityID string, body DetokenizeRequest) error {
+	if err := ValidateIdentityID(identityID); err != nil {
+		return err
+	}
+	if body.Fields == nil {
+		return fmt.Errorf("fields must be an array")
+	}
+	for _, field := range body.Fields {
+		if strings.TrimSpace(string(field)) == "" {
+			return fmt.Errorf("each field must be a non-empty string")
+		}
+	}
+	return nil
+}
