@@ -1,7 +1,9 @@
 package blnkgo
 
 import (
+	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -77,6 +79,36 @@ func (s *ApiKeysService) List(options *ListApiKeysOptions) ([]ApiKeyResponse, *h
 	}
 
 	return keys, resp, nil
+}
+
+// DeleteApiKeysOptions sets optional query params for DELETE /api-keys/{id}.
+type DeleteApiKeysOptions struct {
+	Owner string
+}
+
+// Delete revokes an API key by ID. Pass DeleteApiKeysOptions with Owner when using a master key.
+func (s *ApiKeysService) Delete(apiKeyID string, options *DeleteApiKeysOptions) (*http.Response, error) {
+	if err := ValidateDeleteApiKeys(apiKeyID, options); err != nil {
+		return nil, err
+	}
+
+	endpoint := fmt.Sprintf("api-keys/%s", apiKeyID)
+	if options != nil && options.Owner != "" {
+		endpoint += "?owner=" + url.QueryEscape(options.Owner)
+	}
+
+	req, err := s.client.NewRequest(endpoint, http.MethodDelete, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var discard struct{}
+	resp, err := s.client.CallWithRetry(req, &discard)
+	if err != nil {
+		return resp, err
+	}
+
+	return resp, nil
 }
 
 func NewApiKeysService(client ClientInterface) *ApiKeysService {

@@ -157,3 +157,57 @@ func TestApiKeysService_List_RequestCreationFailure(t *testing.T) {
 	assert.Nil(t, httpResp)
 	mockClient.AssertExpectations(t)
 }
+
+func TestApiKeysService_Delete_Success(t *testing.T) {
+	mockClient, svc := setupApiKeysService()
+
+	apiKeyID := "api_key_abc123"
+	opts := &blnkgo.DeleteApiKeysOptions{Owner: "owner_test"}
+	mockClient.On("NewRequest", "api-keys/"+apiKeyID+"?owner=owner_test", http.MethodDelete, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusNoContent}, nil)
+
+	httpResp, err := svc.Delete(apiKeyID, opts)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusNoContent, httpResp.StatusCode)
+	mockClient.AssertExpectations(t)
+}
+
+func TestApiKeysService_Delete_WithoutOptions(t *testing.T) {
+	mockClient, svc := setupApiKeysService()
+
+	apiKeyID := "api_key_abc123"
+	mockClient.On("NewRequest", "api-keys/"+apiKeyID, http.MethodDelete, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusNoContent}, nil)
+
+	httpResp, err := svc.Delete(apiKeyID, nil)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, httpResp.StatusCode)
+	mockClient.AssertExpectations(t)
+}
+
+func TestApiKeysService_Delete_ValidationError(t *testing.T) {
+	mockClient, svc := setupApiKeysService()
+
+	httpResp, err := svc.Delete("", nil)
+
+	assert.Error(t, err)
+	assert.Nil(t, httpResp)
+	assert.Contains(t, err.Error(), "api key id is required")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestApiKeysService_Delete_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupApiKeysService()
+
+	apiKeyID := "api_key_abc123"
+	mockClient.On("NewRequest", "api-keys/"+apiKeyID, http.MethodDelete, nil).Return(nil, errors.New("failed to create request"))
+
+	httpResp, err := svc.Delete(apiKeyID, nil)
+
+	assert.Error(t, err)
+	assert.Nil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}

@@ -839,6 +839,18 @@ for _, key := range keys {
 }
 ```
 
+Revoke an API key by ID (master key requires the `owner` query parameter):
+
+```go
+resp, err := client.ApiKeys.Delete("api_key_abc123", &blnkgo.DeleteApiKeysOptions{
+    Owner: "team_acme",
+})
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println("Revoked, status:", resp.StatusCode) // 204 No Content
+```
+
 ### Search
 
 Search across ledgers, balances, and transactions with flexible query parameters.
