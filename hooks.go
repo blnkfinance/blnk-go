@@ -42,6 +42,11 @@ type HookResponse struct {
 	LastSuccess bool     `json:"last_success"`
 }
 
+// DeleteHookResponse is returned when a hook is deleted.
+type DeleteHookResponse struct {
+	Message string `json:"message"`
+}
+
 // Create registers a new webhook (master key required).
 func (s *HooksService) Create(body CreateHookRequest) (*HookResponse, *http.Response, error) {
 	if err := ValidateCreateHookRequest(body); err != nil {
@@ -130,6 +135,26 @@ func (s *HooksService) List(options *ListHooksOptions) ([]HookResponse, *http.Re
 	}
 
 	return hooks, resp, nil
+}
+
+// Delete removes a webhook by ID (master key required).
+func (s *HooksService) Delete(hookID string) (*DeleteHookResponse, *http.Response, error) {
+	if err := ValidateHookID(hookID); err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest(fmt.Sprintf("hooks/%s", hookID), http.MethodDelete, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	deleteResp := new(DeleteHookResponse)
+	resp, err := s.client.CallWithRetry(req, deleteResp)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return deleteResp, resp, nil
 }
 
 func NewHooksService(client ClientInterface) *HooksService {

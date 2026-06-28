@@ -911,6 +911,16 @@ for _, hook := range hooks {
 }
 ```
 
+Delete a hook by ID:
+
+```go
+deleted, resp, err := client.Hooks.Delete("hook_test_123")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(deleted.Message) // hook deleted successfully
+```
+
 ### Search
 
 Search across ledgers, balances, and transactions with flexible query parameters.
