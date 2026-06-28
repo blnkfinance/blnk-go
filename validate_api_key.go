@@ -37,3 +37,14 @@ func ValidateListApiKeysOptions(options *ListApiKeysOptions) error {
 	}
 	return nil
 }
+
+// ValidateDeleteApiKeys performs client-side checks before DELETE /api-keys/{id}.
+func ValidateDeleteApiKeys(apiKeyID string, options *DeleteApiKeysOptions) error {
+	if strings.TrimSpace(apiKeyID) == "" {
+		return fmt.Errorf("api key id is required")
+	}
+	if options != nil && options.Owner != "" && strings.TrimSpace(options.Owner) == "" {
+		return fmt.Errorf("owner must be a non-empty string")
+	}
+	return nil
+}

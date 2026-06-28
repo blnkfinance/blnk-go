@@ -29,3 +29,12 @@ func TestValidateListApiKeysOptions(t *testing.T) {
 	assert.NoError(t, ValidateListApiKeysOptions(&ListApiKeysOptions{Owner: "owner_1"}))
 	assert.Error(t, ValidateListApiKeysOptions(&ListApiKeysOptions{Owner: "   "}))
 }
+
+func TestValidateDeleteApiKeys(t *testing.T) {
+	assert.NoError(t, ValidateDeleteApiKeys("api_key_abc123", nil))
+	assert.NoError(t, ValidateDeleteApiKeys("api_key_abc123", &DeleteApiKeysOptions{}))
+	assert.NoError(t, ValidateDeleteApiKeys("api_key_abc123", &DeleteApiKeysOptions{Owner: "owner_1"}))
+	assert.Error(t, ValidateDeleteApiKeys("", nil))
+	assert.Error(t, ValidateDeleteApiKeys("   ", nil))
+	assert.Error(t, ValidateDeleteApiKeys("api_key_abc123", &DeleteApiKeysOptions{Owner: "   "}))
+}

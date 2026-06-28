@@ -227,6 +227,10 @@ func (c *Client) DecodeResponse(resp *http.Response, v interface{}) error {
 		return err
 	}
 
+	if resp.StatusCode == http.StatusNoContent {
+		return nil
+	}
+
 	err = json.NewDecoder(resp.Body).Decode(v)
 	if err != nil {
 		return err
