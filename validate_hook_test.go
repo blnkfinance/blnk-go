@@ -24,3 +24,19 @@ func TestValidateCreateHookRequest(t *testing.T) {
 	assert.Error(t, ValidateCreateHookRequest(CreateHookRequest{Name: valid.Name, URL: valid.URL, Type: valid.Type, Active: true, Timeout: 0, RetryCount: 3}))
 	assert.Error(t, ValidateCreateHookRequest(CreateHookRequest{Name: valid.Name, URL: valid.URL, Type: valid.Type, Active: true, Timeout: 30, RetryCount: -1}))
 }
+
+func TestValidateUpdateHookRequest(t *testing.T) {
+	valid := CreateHookRequest{
+		Name:       "Pre-transaction validation",
+		URL:        "https://api.example.com/validate",
+		Type:       HookTypePreTransaction,
+		Active:     true,
+		Timeout:    30,
+		RetryCount: 3,
+	}
+
+	assert.NoError(t, ValidateUpdateHookRequest("hk_test_123", valid))
+	assert.Error(t, ValidateUpdateHookRequest("", valid))
+	assert.Error(t, ValidateUpdateHookRequest("   ", valid))
+	assert.Error(t, ValidateUpdateHookRequest("hk_test_123", CreateHookRequest{Name: valid.Name, Type: valid.Type, Active: true, Timeout: 30, RetryCount: 3}))
+}

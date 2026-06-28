@@ -870,6 +870,23 @@ if err != nil {
 fmt.Println("Hook ID:", hook.ID)
 ```
 
+Update an existing hook by ID:
+
+```go
+updated, resp, err := client.Hooks.Update(hook.ID, blnkgo.UpdateHookRequest{
+    Name:       "Pre-transaction validation (updated)",
+    URL:        "https://api.example.com/validate-v2",
+    Type:       blnkgo.HookTypePreTransaction,
+    Active:     false,
+    Timeout:    45,
+    RetryCount: 5,
+})
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println("Updated hook:", updated.Name)
+```
+
 ### Search
 
 Search across ledgers, balances, and transactions with flexible query parameters.
