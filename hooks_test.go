@@ -93,3 +93,84 @@ func TestHooksService_Create_RequestCreationFailure(t *testing.T) {
 	assert.Nil(t, httpResp)
 	mockClient.AssertExpectations(t)
 }
+
+func TestHooksService_Update_Success(t *testing.T) {
+	mockClient, svc := setupHooksService()
+
+	hookID := "hk_test_123"
+	body := blnkgo.UpdateHookRequest{
+		Name:       "Pre-transaction validation (updated)",
+		URL:        "https://api.example.com/validate-v2",
+		Type:       blnkgo.HookTypePreTransaction,
+		Active:     false,
+		Timeout:    45,
+		RetryCount: 5,
+	}
+
+	mockClient.On("NewRequest", "hooks/"+hookID, http.MethodPut, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.HookResponse)
+		*resp = blnkgo.HookResponse{
+			ID:          hookID,
+			Name:        body.Name,
+			URL:         body.URL,
+			Type:        body.Type,
+			Active:      body.Active,
+			Timeout:     body.Timeout,
+			RetryCount:  body.RetryCount,
+			CreatedAt:   "2024-11-26T08:36:36.238244338Z",
+			LastRun:     "0001-01-01T00:00:00Z",
+			LastSuccess: false,
+		}
+	})
+
+	hook, httpResp, err := svc.Update(hookID, body)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Equal(t, hookID, hook.ID)
+	assert.Equal(t, body.Name, hook.Name)
+	assert.False(t, hook.Active)
+	mockClient.AssertExpectations(t)
+}
+
+func TestHooksService_Update_ValidationError(t *testing.T) {
+	mockClient, svc := setupHooksService()
+
+	_, _, err := svc.Update("", blnkgo.UpdateHookRequest{
+		Name:       "updated",
+		URL:        "https://api.example.com/validate",
+		Type:       blnkgo.HookTypePreTransaction,
+		Active:     true,
+		Timeout:    30,
+		RetryCount: 3,
+	})
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "hook id is required")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestHooksService_Update_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupHooksService()
+
+	hookID := "hk_test_123"
+	body := blnkgo.UpdateHookRequest{
+		Name:       "Pre-transaction validation (updated)",
+		URL:        "https://api.example.com/validate-v2",
+		Type:       blnkgo.HookTypePreTransaction,
+		Active:     false,
+		Timeout:    45,
+		RetryCount: 5,
+	}
+
+	mockClient.On("NewRequest", "hooks/"+hookID, http.MethodPut, body).Return(nil, errors.New("failed to create request"))
+
+	hook, httpResp, err := svc.Update(hookID, body)
+
+	assert.Error(t, err)
+	assert.Nil(t, hook)
+	assert.Nil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}
