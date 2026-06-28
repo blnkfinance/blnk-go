@@ -724,6 +724,19 @@ for _, field := range fields.TokenizedFields {
 }
 ```
 
+Detokenize a single field and read the original value:
+
+```go
+detokenized, resp, err := client.Identity.DetokenizeField(
+    identity.IdentityId,
+    string(blnkgo.TokenizableFieldEmailAddress),
+)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(detokenized.Field, detokenized.Value)
+```
+
 ### Reconciliation
 
 The reconciliation feature allows you to match and verify transactions against external data sources.

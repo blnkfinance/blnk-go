@@ -68,6 +68,12 @@ type GetTokenizedFieldsResponse struct {
 	TokenizedFields []TokenizableIdentityField `json:"tokenized_fields"`
 }
 
+// DetokenizeFieldResponse is returned when a single identity field is detokenized.
+type DetokenizeFieldResponse struct {
+	Field string `json:"field"`
+	Value string `json:"value"`
+}
+
 func (s *IdentityService) Create(identity Identity) (*IdentityResponse, *http.Response, error) {
 	//validate the identity
 	if err := ValidateCreateIdentity(identity); err != nil {
@@ -202,6 +208,27 @@ func (s *IdentityService) GetTokenizedFields(identityID string) (*GetTokenizedFi
 	}
 
 	return fieldsResp, resp, nil
+}
+
+// DetokenizeField detokenizes a single PII field and returns the original value.
+func (s *IdentityService) DetokenizeField(identityID string, field string) (*DetokenizeFieldResponse, *http.Response, error) {
+	if err := ValidateTokenizeIdentityField(identityID, field); err != nil {
+		return nil, nil, err
+	}
+
+	u := fmt.Sprintf("identities/%s/detokenize/%s", identityID, field)
+	req, err := s.client.NewRequest(u, http.MethodGet, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	detokenizeResp := new(DetokenizeFieldResponse)
+	resp, err := s.client.CallWithRetry(req, detokenizeResp)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return detokenizeResp, resp, nil
 }
 
 func NewIdentityService(client ClientInterface) *IdentityService {

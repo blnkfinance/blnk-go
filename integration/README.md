@@ -73,6 +73,7 @@ go test -tags=integration -v ./integration/...
 | #45 tokenize identity field | 0.13.2+ | POST /identities/{id}/tokenize/{field}; tokenization must be enabled |
 | #46 tokenize identity | 0.13.2+ | POST /identities/{id}/tokenize; tokenization must be enabled |
 | #47 get tokenized fields | 0.13.2+ | GET /identities/{id}/tokenized-fields; tokenization must be enabled |
+| #48 detokenize identity field | 0.13.2+ | GET /identities/{id}/detokenize/{field}; tokenization must be enabled |
 | 0.15-only features (delete identity, etc.) | 0.15.0 | Test when we reach remaining Go 1.3.0 issues |
 
 If `BLNK_API_KEY` is unset, integration tests skip.
