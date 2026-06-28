@@ -26,6 +26,7 @@ go test -tags=integration -v ./integration/... -run Issue42
 go test -tags=integration -v ./integration/... -run Issue43
 go test -tags=integration -v ./integration/... -run Issue44
 go test -tags=integration -v ./integration/... -run Issue36
+go test -tags=integration -v ./integration/... -run Issue61
 
 # all integration tests
 go test -tags=integration -v ./integration/... 
@@ -56,6 +57,7 @@ go test -tags=integration -v ./integration/...
 | #43 update matching rule | 0.14.x+ | PUT /reconciliation/matching-rules/{rule_id} |
 | #44 delete matching rule | 0.14.x+ | DELETE /reconciliation/matching-rules/{rule_id} |
 | #36 transaction lineage | 0.14.x+ | Not 0.15-only |
+| #61 health check | 0.14.x+ | GET /health; auth not required |
 | 0.15-only features (delete identity, hooks, api-keys, etc.) | 0.15.0 | Test when we reach Go 1.3.0 issues |
 
 If `BLNK_API_KEY` is unset, integration tests skip.

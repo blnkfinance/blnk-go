@@ -795,6 +795,18 @@ fmt.Println("Matched:", recon.MatchedTransactions)
 fmt.Println("Unmatched:", recon.UnmatchedTransactions)
 ```
 
+### Health
+
+Check whether Blnk Core is running and reachable:
+
+```go
+health, resp, err := client.Health.Check()
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println("Status:", health.Status) // UP when Core is healthy
+```
+
 ### Search
 
 Search across ledgers, balances, and transactions with flexible query parameters.
