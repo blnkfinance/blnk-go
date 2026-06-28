@@ -31,6 +31,7 @@ type Client struct {
 	Metadata       *MetadataService
 	Health         *HealthService
 	ApiKeys        *ApiKeysService
+	Hooks          *HooksService
 }
 
 // create a client interface
@@ -102,6 +103,7 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 	client.Metadata = &MetadataService{client: client}
 	client.Health = &HealthService{client: client}
 	client.ApiKeys = &ApiKeysService{client: client}
+	client.Hooks = &HooksService{client: client}
 
 	return client
 }
