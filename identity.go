@@ -53,6 +53,16 @@ type TokenizeFieldResponse struct {
 	Message string `json:"message"`
 }
 
+// TokenizeRequest is the body for POST /identities/{id}/tokenize.
+type TokenizeRequest struct {
+	Fields []TokenizableIdentityField `json:"fields"`
+}
+
+// TokenizeResponse is returned when multiple identity fields are tokenized.
+type TokenizeResponse struct {
+	Message string `json:"message"`
+}
+
 func (s *IdentityService) Create(identity Identity) (*IdentityResponse, *http.Response, error) {
 	//validate the identity
 	if err := ValidateCreateIdentity(identity); err != nil {
@@ -139,6 +149,27 @@ func (s *IdentityService) TokenizeField(identityID string, field string) (*Token
 	}
 
 	tokenizeResp := new(TokenizeFieldResponse)
+	resp, err := s.client.CallWithRetry(req, tokenizeResp)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return tokenizeResp, resp, nil
+}
+
+// Tokenize tokenizes multiple PII fields on an identity.
+func (s *IdentityService) Tokenize(identityID string, body TokenizeRequest) (*TokenizeResponse, *http.Response, error) {
+	if err := ValidateTokenizeIdentityRequest(identityID, body); err != nil {
+		return nil, nil, err
+	}
+
+	u := fmt.Sprintf("identities/%s/tokenize", identityID)
+	req, err := s.client.NewRequest(u, http.MethodPost, body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tokenizeResp := new(TokenizeResponse)
 	resp, err := s.client.CallWithRetry(req, tokenizeResp)
 	if err != nil {
 		return nil, resp, err

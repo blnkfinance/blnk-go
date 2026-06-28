@@ -543,3 +543,68 @@ func TestIdentityService_TokenizeField_RequestCreationFailure(t *testing.T) {
 	assert.Nil(t, httpResp)
 	mockClient.AssertExpectations(t)
 }
+
+func TestIdentityService_Tokenize_Success(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	identityID := "idt_573ebcc9-4da0-4295-82dc-0fb152b56660"
+	body := blnkgo.TokenizeRequest{
+		Fields: []blnkgo.TokenizableIdentityField{
+			blnkgo.TokenizableFieldFirstName,
+			blnkgo.TokenizableFieldLastName,
+		},
+	}
+	path := "identities/" + identityID + "/tokenize"
+
+	mockClient.On("NewRequest", path, http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.TokenizeResponse)
+		*resp = blnkgo.TokenizeResponse{Message: "Fields tokenized successfully"}
+	})
+
+	tokenized, httpResp, err := svc.Tokenize(identityID, body)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Equal(t, "Fields tokenized successfully", tokenized.Message)
+	mockClient.AssertExpectations(t)
+}
+
+func TestIdentityService_Tokenize_ValidationErrorEmptyID(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	body := blnkgo.TokenizeRequest{Fields: []blnkgo.TokenizableIdentityField{blnkgo.TokenizableFieldFirstName}}
+	_, _, err := svc.Tokenize("", body)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "identity id is required")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestIdentityService_Tokenize_ValidationErrorEmptyFields(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	_, _, err := svc.Tokenize("idt_test_123", blnkgo.TokenizeRequest{})
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "at least one field must be specified")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestIdentityService_Tokenize_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	identityID := "idt_test_123"
+	body := blnkgo.TokenizeRequest{Fields: []blnkgo.TokenizableIdentityField{blnkgo.TokenizableFieldEmailAddress}}
+	path := "identities/" + identityID + "/tokenize"
+
+	mockClient.On("NewRequest", path, http.MethodPost, body).Return(nil, errors.New("failed to create request"))
+
+	tokenized, httpResp, err := svc.Tokenize(identityID, body)
+
+	assert.Error(t, err)
+	assert.Nil(t, tokenized)
+	assert.Nil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}

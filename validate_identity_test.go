@@ -111,3 +111,18 @@ func TestValidateTokenizeIdentityField(t *testing.T) {
 	require.Error(t, blnkgo.ValidateTokenizeIdentityField("", "FirstName"))
 	require.Error(t, blnkgo.ValidateTokenizeIdentityField("idt_test_123", ""))
 }
+
+func TestValidateTokenizeIdentityRequest(t *testing.T) {
+	body := blnkgo.TokenizeRequest{
+		Fields: []blnkgo.TokenizableIdentityField{
+			blnkgo.TokenizableFieldFirstName,
+			blnkgo.TokenizableFieldEmailAddress,
+		},
+	}
+	require.NoError(t, blnkgo.ValidateTokenizeIdentityRequest("idt_test_123", body))
+	require.Error(t, blnkgo.ValidateTokenizeIdentityRequest("", body))
+	require.Error(t, blnkgo.ValidateTokenizeIdentityRequest("idt_test_123", blnkgo.TokenizeRequest{}))
+	require.Error(t, blnkgo.ValidateTokenizeIdentityRequest("idt_test_123", blnkgo.TokenizeRequest{
+		Fields: []blnkgo.TokenizableIdentityField{""},
+	}))
+}
