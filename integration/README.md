@@ -63,6 +63,7 @@ go test -tags=integration -v ./integration/...
 | #58 create api key | 0.14.x+ | POST /api-keys; master or api-keys:write key |
 | #59 list api keys | 0.14.x+ | GET /api-keys?owner=; master requires owner |
 | #60 delete api key | 0.14.x+ | DELETE /api-keys/{id}?owner=; master requires owner |
-| 0.15-only features (delete identity, hooks, etc.) | 0.15.0 | Test when we reach remaining Go 1.3.0 issues |
+| #50 create hook | 0.8.4+ | POST /hooks; master key required |
+| 0.15-only features (delete identity, etc.) | 0.15.0 | Test when we reach remaining Go 1.3.0 issues |
 
 If `BLNK_API_KEY` is unset, integration tests skip.

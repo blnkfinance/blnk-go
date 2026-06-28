@@ -851,6 +851,25 @@ if err != nil {
 fmt.Println("Revoked, status:", resp.StatusCode) // 204 No Content
 ```
 
+### Hooks
+
+Register a pre- or post-transaction webhook (master key required):
+
+```go
+hook, resp, err := client.Hooks.Create(blnkgo.CreateHookRequest{
+    Name:       "Pre-transaction validation",
+    URL:        "https://api.example.com/validate",
+    Type:       blnkgo.HookTypePreTransaction,
+    Active:     true,
+    Timeout:    30,
+    RetryCount: 3,
+})
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println("Hook ID:", hook.ID)
+```
+
 ### Search
 
 Search across ledgers, balances, and transactions with flexible query parameters.
