@@ -46,3 +46,10 @@ func TestValidateHookID(t *testing.T) {
 	assert.Error(t, ValidateHookID(""))
 	assert.Error(t, ValidateHookID("   "))
 }
+
+func TestValidateListHooksOptions(t *testing.T) {
+	assert.NoError(t, ValidateListHooksOptions(nil))
+	assert.NoError(t, ValidateListHooksOptions(&ListHooksOptions{}))
+	assert.NoError(t, ValidateListHooksOptions(&ListHooksOptions{Type: HookTypePreTransaction}))
+	assert.Error(t, ValidateListHooksOptions(&ListHooksOptions{Type: "INVALID"}))
+}
