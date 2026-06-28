@@ -36,8 +36,16 @@ func ValidateCreateHookRequest(body CreateHookRequest) error {
 
 // ValidateUpdateHookRequest performs client-side checks before PUT /hooks/{id}.
 func ValidateUpdateHookRequest(hookID string, body UpdateHookRequest) error {
+	if err := ValidateHookID(hookID); err != nil {
+		return err
+	}
+	return ValidateCreateHookRequest(body)
+}
+
+// ValidateHookID performs client-side checks before hook operations that require an ID.
+func ValidateHookID(hookID string) error {
 	if strings.TrimSpace(hookID) == "" {
 		return fmt.Errorf("hook id is required")
 	}
-	return ValidateCreateHookRequest(body)
+	return nil
 }

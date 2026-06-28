@@ -82,6 +82,26 @@ func (s *HooksService) Update(hookID string, body UpdateHookRequest) (*HookRespo
 	return hookResp, resp, nil
 }
 
+// Get retrieves a webhook by ID (master key required).
+func (s *HooksService) Get(hookID string) (*HookResponse, *http.Response, error) {
+	if err := ValidateHookID(hookID); err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest(fmt.Sprintf("hooks/%s", hookID), http.MethodGet, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	hookResp := new(HookResponse)
+	resp, err := s.client.CallWithRetry(req, hookResp)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return hookResp, resp, nil
+}
+
 func NewHooksService(client ClientInterface) *HooksService {
 	return &HooksService{client: client}
 }
