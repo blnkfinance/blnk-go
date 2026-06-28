@@ -9,6 +9,7 @@ import (
 	blnkgo "github.com/blnkfinance/blnk-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func setupApiKeysService() (*MockClient, *blnkgo.ApiKeysService) {
@@ -83,6 +84,76 @@ func TestApiKeysService_Create_RequestCreationFailure(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, apiKeyResp)
+	assert.Nil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}
+
+func TestApiKeysService_List_Success(t *testing.T) {
+	mockClient, svc := setupApiKeysService()
+
+	opts := &blnkgo.ListApiKeysOptions{Owner: "owner_test"}
+	mockClient.On("NewRequest", "api-keys", http.MethodGet, opts).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		keys := args.Get(1).(*[]blnkgo.ApiKeyResponse)
+		*keys = []blnkgo.ApiKeyResponse{
+			{
+				ApiKeyID:  "api_key_abc123",
+				Name:      "read-only",
+				OwnerID:   "owner_test",
+				Scopes:    []string{"ledgers:read"},
+				IsRevoked: false,
+			},
+		}
+	})
+
+	keys, httpResp, err := svc.List(opts)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	require.Len(t, keys, 1)
+	assert.Equal(t, "api_key_abc123", keys[0].ApiKeyID)
+	assert.Equal(t, "owner_test", keys[0].OwnerID)
+	mockClient.AssertExpectations(t)
+}
+
+func TestApiKeysService_List_WithoutOptions(t *testing.T) {
+	mockClient, svc := setupApiKeysService()
+
+	mockClient.On("NewRequest", "api-keys", http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		keys := args.Get(1).(*[]blnkgo.ApiKeyResponse)
+		*keys = []blnkgo.ApiKeyResponse{}
+	})
+
+	keys, httpResp, err := svc.List(nil)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Empty(t, keys)
+	mockClient.AssertExpectations(t)
+}
+
+func TestApiKeysService_List_ValidationError(t *testing.T) {
+	mockClient, svc := setupApiKeysService()
+
+	_, _, err := svc.List(&blnkgo.ListApiKeysOptions{Owner: "   "})
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "owner must be a non-empty string")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestApiKeysService_List_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupApiKeysService()
+
+	opts := &blnkgo.ListApiKeysOptions{Owner: "owner_test"}
+	mockClient.On("NewRequest", "api-keys", http.MethodGet, opts).Return(nil, errors.New("failed to create request"))
+
+	keys, httpResp, err := svc.List(opts)
+
+	assert.Error(t, err)
+	assert.Nil(t, keys)
 	assert.Nil(t, httpResp)
 	mockClient.AssertExpectations(t)
 }
