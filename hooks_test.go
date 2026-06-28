@@ -302,3 +302,46 @@ func TestHooksService_List_RequestCreationFailure(t *testing.T) {
 	assert.Nil(t, httpResp)
 	mockClient.AssertExpectations(t)
 }
+
+func TestHooksService_Delete_Success(t *testing.T) {
+	mockClient, svc := setupHooksService()
+
+	hookID := "hook_test_123"
+	mockClient.On("NewRequest", "hooks/"+hookID, http.MethodDelete, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.DeleteHookResponse)
+		*resp = blnkgo.DeleteHookResponse{Message: "hook deleted successfully"}
+	})
+
+	deleted, httpResp, err := svc.Delete(hookID)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Equal(t, "hook deleted successfully", deleted.Message)
+	mockClient.AssertExpectations(t)
+}
+
+func TestHooksService_Delete_ValidationError(t *testing.T) {
+	mockClient, svc := setupHooksService()
+
+	_, _, err := svc.Delete("")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "hook id is required")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestHooksService_Delete_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupHooksService()
+
+	hookID := "hook_test_123"
+	mockClient.On("NewRequest", "hooks/"+hookID, http.MethodDelete, nil).Return(nil, errors.New("failed to create request"))
+
+	deleted, httpResp, err := svc.Delete(hookID)
+
+	assert.Error(t, err)
+	assert.Nil(t, deleted)
+	assert.Nil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}
