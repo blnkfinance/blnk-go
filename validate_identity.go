@@ -30,3 +30,22 @@ func ValidateCreateIdentity(identity Identity) error {
 	}
 	return validateIdentityID(identity.IdentityID)
 }
+
+// ValidateIdentityID performs client-side checks before identity operations that require an ID.
+func ValidateIdentityID(identityID string) error {
+	if strings.TrimSpace(identityID) == "" {
+		return fmt.Errorf("identity id is required")
+	}
+	return nil
+}
+
+// ValidateTokenizeIdentityField performs client-side checks before POST /identities/{id}/tokenize/{field}.
+func ValidateTokenizeIdentityField(identityID, field string) error {
+	if err := ValidateIdentityID(identityID); err != nil {
+		return err
+	}
+	if strings.TrimSpace(field) == "" {
+		return fmt.Errorf("field name is required")
+	}
+	return nil
+}

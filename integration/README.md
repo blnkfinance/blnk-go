@@ -70,6 +70,7 @@ go test -tags=integration -v ./integration/...
 | #54 delete hook | 0.8.4+ | DELETE /hooks/{id}; master key required |
 | #56 start reindex | 0.13.2+ | POST /search/reindex |
 | #57 get reindex status | 0.13.2+ | GET /search/reindex |
+| #45 tokenize identity field | 0.13.2+ | POST /identities/{id}/tokenize/{field}; tokenization must be enabled |
 | 0.15-only features (delete identity, etc.) | 0.15.0 | Test when we reach remaining Go 1.3.0 issues |
 
 If `BLNK_API_KEY` is unset, integration tests skip.

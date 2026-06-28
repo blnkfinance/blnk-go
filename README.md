@@ -683,6 +683,19 @@ if result.TotalCount != nil {
 fmt.Printf("Data: %+v\n", result.Data)
 ```
 
+Tokenize a single PII field (use PascalCase struct field names such as `FirstName`, not `first_name`):
+
+```go
+tokenized, resp, err := client.Identity.TokenizeField(
+    identity.IdentityId,
+    string(blnkgo.TokenizableFieldFirstName),
+)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(tokenized.Message) // Field tokenized successfully
+```
+
 ### Reconciliation
 
 The reconciliation feature allows you to match and verify transactions against external data sources.

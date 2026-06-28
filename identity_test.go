@@ -484,3 +484,62 @@ func TestIdentityService_Filter_ServerError(t *testing.T) {
 	assert.Equal(t, expectedResp, resp)
 	mockClient.AssertExpectations(t)
 }
+
+func TestIdentityService_TokenizeField_Success(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	identityID := "idt_573ebcc9-4da0-4295-82dc-0fb152b56660"
+	field := string(blnkgo.TokenizableFieldFirstName)
+	path := "identities/" + identityID + "/tokenize/" + field
+
+	mockClient.On("NewRequest", path, http.MethodPost, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.TokenizeFieldResponse)
+		*resp = blnkgo.TokenizeFieldResponse{Message: "Field tokenized successfully"}
+	})
+
+	tokenized, httpResp, err := svc.TokenizeField(identityID, field)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Equal(t, "Field tokenized successfully", tokenized.Message)
+	mockClient.AssertExpectations(t)
+}
+
+func TestIdentityService_TokenizeField_ValidationErrorEmptyID(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	_, _, err := svc.TokenizeField("", string(blnkgo.TokenizableFieldFirstName))
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "identity id is required")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestIdentityService_TokenizeField_ValidationErrorEmptyField(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	_, _, err := svc.TokenizeField("idt_test_123", "")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "field name is required")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestIdentityService_TokenizeField_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	identityID := "idt_test_123"
+	field := string(blnkgo.TokenizableFieldEmailAddress)
+	path := "identities/" + identityID + "/tokenize/" + field
+
+	mockClient.On("NewRequest", path, http.MethodPost, nil).Return(nil, errors.New("failed to create request"))
+
+	tokenized, httpResp, err := svc.TokenizeField(identityID, field)
+
+	assert.Error(t, err)
+	assert.Nil(t, tokenized)
+	assert.Nil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}
