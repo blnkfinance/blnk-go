@@ -228,3 +228,77 @@ func TestHooksService_Get_RequestCreationFailure(t *testing.T) {
 	assert.Nil(t, httpResp)
 	mockClient.AssertExpectations(t)
 }
+
+func TestHooksService_List_Success(t *testing.T) {
+	mockClient, svc := setupHooksService()
+
+	opts := &blnkgo.ListHooksOptions{Type: blnkgo.HookTypePreTransaction}
+	mockClient.On("NewRequest", "hooks", http.MethodGet, opts).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		hooks := args.Get(1).(*[]blnkgo.HookResponse)
+		*hooks = []blnkgo.HookResponse{
+			{
+				ID:          "hook_test_123",
+				Name:        "Pre-transaction validation",
+				URL:         "https://api.example.com/validate",
+				Type:        blnkgo.HookTypePreTransaction,
+				Active:      true,
+				Timeout:     30,
+				RetryCount:  3,
+				CreatedAt:   "2024-11-26T08:36:36.238244338Z",
+				LastRun:     "0001-01-01T00:00:00Z",
+				LastSuccess: false,
+			},
+		}
+	})
+
+	hooks, httpResp, err := svc.List(opts)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Len(t, hooks, 1)
+	assert.Equal(t, "hook_test_123", hooks[0].ID)
+	mockClient.AssertExpectations(t)
+}
+
+func TestHooksService_List_WithoutOptions(t *testing.T) {
+	mockClient, svc := setupHooksService()
+
+	mockClient.On("NewRequest", "hooks", http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		hooks := args.Get(1).(*[]blnkgo.HookResponse)
+		*hooks = []blnkgo.HookResponse{}
+	})
+
+	hooks, httpResp, err := svc.List(nil)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Empty(t, hooks)
+	mockClient.AssertExpectations(t)
+}
+
+func TestHooksService_List_ValidationError(t *testing.T) {
+	mockClient, svc := setupHooksService()
+
+	_, _, err := svc.List(&blnkgo.ListHooksOptions{Type: "INVALID"})
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "type must be PRE_TRANSACTION or POST_TRANSACTION")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestHooksService_List_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupHooksService()
+
+	opts := &blnkgo.ListHooksOptions{Type: blnkgo.HookTypePreTransaction}
+	mockClient.On("NewRequest", "hooks", http.MethodGet, opts).Return(nil, errors.New("failed to create request"))
+
+	hooks, httpResp, err := svc.List(opts)
+
+	assert.Error(t, err)
+	assert.Nil(t, hooks)
+	assert.Nil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}

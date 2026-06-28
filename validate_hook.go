@@ -49,3 +49,14 @@ func ValidateHookID(hookID string) error {
 	}
 	return nil
 }
+
+// ValidateListHooksOptions performs client-side checks before GET /hooks.
+func ValidateListHooksOptions(options *ListHooksOptions) error {
+	if options == nil {
+		return nil
+	}
+	if options.Type != "" && !isValidHookType(options.Type) {
+		return fmt.Errorf("type must be PRE_TRANSACTION or POST_TRANSACTION")
+	}
+	return nil
+}

@@ -897,6 +897,20 @@ if err != nil {
 fmt.Println("Hook:", hook.Name, hook.Active)
 ```
 
+List hooks, optionally filtered by type:
+
+```go
+hooks, resp, err := client.Hooks.List(&blnkgo.ListHooksOptions{
+    Type: blnkgo.HookTypePreTransaction,
+})
+if err != nil {
+    log.Fatal(err)
+}
+for _, hook := range hooks {
+    fmt.Println(hook.ID, hook.Name, hook.Type)
+}
+```
+
 ### Search
 
 Search across ledgers, balances, and transactions with flexible query parameters.

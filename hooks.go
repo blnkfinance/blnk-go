@@ -102,6 +102,36 @@ func (s *HooksService) Get(hookID string) (*HookResponse, *http.Response, error)
 	return hookResp, resp, nil
 }
 
+// ListHooksOptions filters GET /hooks results.
+type ListHooksOptions struct {
+	Type HookType `url:"type,omitempty"`
+}
+
+// List returns webhooks, optionally filtered by type (master key required).
+func (s *HooksService) List(options *ListHooksOptions) ([]HookResponse, *http.Response, error) {
+	if err := ValidateListHooksOptions(options); err != nil {
+		return nil, nil, err
+	}
+
+	var query interface{}
+	if options != nil && options.Type != "" {
+		query = options
+	}
+
+	req, err := s.client.NewRequest("hooks", http.MethodGet, query)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var hooks []HookResponse
+	resp, err := s.client.CallWithRetry(req, &hooks)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return hooks, resp, nil
+}
+
 func NewHooksService(client ClientInterface) *HooksService {
 	return &HooksService{client: client}
 }
