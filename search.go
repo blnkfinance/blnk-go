@@ -135,6 +135,28 @@ type SearchDocument struct {
 	Name string `json:"name,omitempty"`
 }
 
+// StartReindexRequest is the optional body for POST /search/reindex.
+type StartReindexRequest struct {
+	BatchSize *int `json:"batch_size,omitempty"`
+}
+
+// ReindexProgress tracks Typesense reindex progress.
+type ReindexProgress struct {
+	Status           string     `json:"status"`
+	Phase            string     `json:"phase"`
+	TotalRecords     int64      `json:"total_records"`
+	ProcessedRecords int64      `json:"processed_records"`
+	Errors           []string   `json:"errors,omitempty"`
+	StartedAt        time.Time  `json:"started_at"`
+	CompletedAt      *time.Time `json:"completed_at,omitempty"`
+}
+
+// StartReindexResponse is returned when a reindex job is started.
+type StartReindexResponse struct {
+	Message  string          `json:"message"`
+	Progress ReindexProgress `json:"progress"`
+}
+
 func (s *SearchService) SearchDocument(body SearchParams, resource ResourceType) (*SearchResponse, *http.Response, error) {
 	u := fmt.Sprintf("search/%s", resource)
 	req, err := s.client.NewRequest(u, http.MethodPost, body)
@@ -149,6 +171,49 @@ func (s *SearchService) SearchDocument(body SearchParams, resource ResourceType)
 	}
 
 	return searchResponse, resp, nil
+}
+
+// StartReindex triggers a full Typesense reindex from the database.
+func (s *SearchService) StartReindex(options *StartReindexRequest) (*StartReindexResponse, *http.Response, error) {
+	if options != nil {
+		if err := ValidateStartReindexRequest(*options); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var body interface{} = struct{}{}
+	if options != nil && options.BatchSize != nil && *options.BatchSize > 0 {
+		body = StartReindexRequest{BatchSize: options.BatchSize}
+	}
+
+	req, err := s.client.NewRequest("search/reindex", http.MethodPost, body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	startResp := new(StartReindexResponse)
+	resp, err := s.client.CallWithRetry(req, startResp)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return startResp, resp, nil
+}
+
+// GetReindexStatus returns the current Typesense reindex progress.
+func (s *SearchService) GetReindexStatus() (*ReindexProgress, *http.Response, error) {
+	req, err := s.client.NewRequest("search/reindex", http.MethodGet, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	progress := new(ReindexProgress)
+	resp, err := s.client.CallWithRetry(req, progress)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return progress, resp, nil
 }
 
 func NewSearchService(c ClientInterface) *SearchService {

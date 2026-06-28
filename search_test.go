@@ -18,6 +18,10 @@ func setupSearchService() (*MockClient, *blnkgo.SearchService) {
 	return mockClient, svc
 }
 
+func intPtr(v int) *int {
+	return &v
+}
+
 func TestSearchService_SearchDocument_Success(t *testing.T) {
 	mockClient, svc := setupSearchService()
 
@@ -751,4 +755,108 @@ func TestSearchDocument_LedgerFields(t *testing.T) {
 	if metaStr, ok := doc.MetaData.(string); ok {
 		assert.Contains(t, metaStr, "motorista pontos")
 	}
+}
+
+func TestSearchService_StartReindex_SuccessEmptyBody(t *testing.T) {
+	mockClient, svc := setupSearchService()
+
+	mockClient.On("NewRequest", "search/reindex", http.MethodPost, struct{}{}).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusAccepted}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.StartReindexResponse)
+		*resp = blnkgo.StartReindexResponse{
+			Message: "Reindex operation started",
+			Progress: blnkgo.ReindexProgress{
+				Status: "in_progress",
+				Phase:  "indexing_transactions",
+			},
+		}
+	})
+
+	started, httpResp, err := svc.StartReindex(nil)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusAccepted, httpResp.StatusCode)
+	assert.Equal(t, "Reindex operation started", started.Message)
+	assert.Equal(t, "in_progress", started.Progress.Status)
+	mockClient.AssertExpectations(t)
+}
+
+func TestSearchService_StartReindex_SuccessWithBatchSize(t *testing.T) {
+	mockClient, svc := setupSearchService()
+
+	opts := &blnkgo.StartReindexRequest{BatchSize: intPtr(500)}
+	body := blnkgo.StartReindexRequest{BatchSize: intPtr(500)}
+
+	mockClient.On("NewRequest", "search/reindex", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusAccepted}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.StartReindexResponse)
+		*resp = blnkgo.StartReindexResponse{Message: "Reindex operation started"}
+	})
+
+	started, httpResp, err := svc.StartReindex(opts)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, started)
+	assert.Equal(t, http.StatusAccepted, httpResp.StatusCode)
+	mockClient.AssertExpectations(t)
+}
+
+func TestSearchService_StartReindex_ValidationError(t *testing.T) {
+	mockClient, svc := setupSearchService()
+
+	opts := &blnkgo.StartReindexRequest{BatchSize: intPtr(0)}
+	_, _, err := svc.StartReindex(opts)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "batch_size must be a positive integer")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestSearchService_StartReindex_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupSearchService()
+
+	mockClient.On("NewRequest", "search/reindex", http.MethodPost, struct{}{}).Return(nil, fmt.Errorf("failed to create request"))
+
+	started, httpResp, err := svc.StartReindex(nil)
+
+	assert.Error(t, err)
+	assert.Nil(t, started)
+	assert.Nil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}
+
+func TestSearchService_GetReindexStatus_Success(t *testing.T) {
+	mockClient, svc := setupSearchService()
+
+	mockClient.On("NewRequest", "search/reindex", http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.ReindexProgress)
+		*resp = blnkgo.ReindexProgress{
+			Status: "in_progress",
+			Phase:  "indexing_transactions",
+		}
+	})
+
+	progress, httpResp, err := svc.GetReindexStatus()
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Equal(t, "in_progress", progress.Status)
+	assert.Equal(t, "indexing_transactions", progress.Phase)
+	mockClient.AssertExpectations(t)
+}
+
+func TestSearchService_GetReindexStatus_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupSearchService()
+
+	mockClient.On("NewRequest", "search/reindex", http.MethodGet, nil).Return(nil, fmt.Errorf("failed to create request"))
+
+	progress, httpResp, err := svc.GetReindexStatus()
+
+	assert.Error(t, err)
+	assert.Nil(t, progress)
+	assert.Nil(t, httpResp)
+	mockClient.AssertExpectations(t)
 }
