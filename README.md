@@ -807,6 +807,24 @@ if err != nil {
 fmt.Println("Status:", health.Status) // UP when Core is healthy
 ```
 
+### API keys
+
+Create a scoped API key (requires master key or `api-keys:write` scope):
+
+```go
+apiKey, resp, err := client.ApiKeys.Create(blnkgo.CreateApiKeyRequest{
+    Name:      "read-only-ledger",
+    Owner:     "team_acme",
+    Scopes:    []string{"ledgers:read"},
+    ExpiresAt: time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC),
+})
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println("Key ID:", apiKey.ApiKeyID)
+fmt.Println("Secret:", apiKey.Key) // store securely; shown once on create
+```
+
 ### Search
 
 Search across ledgers, balances, and transactions with flexible query parameters.
