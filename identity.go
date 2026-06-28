@@ -35,6 +35,24 @@ type IdentityResponse struct {
 	Identity
 }
 
+// TokenizableIdentityField is a PascalCase Core struct field name (not snake_case JSON key).
+type TokenizableIdentityField string
+
+const (
+	TokenizableFieldFirstName    TokenizableIdentityField = "FirstName"
+	TokenizableFieldLastName     TokenizableIdentityField = "LastName"
+	TokenizableFieldOtherNames   TokenizableIdentityField = "OtherNames"
+	TokenizableFieldEmailAddress TokenizableIdentityField = "EmailAddress"
+	TokenizableFieldPhoneNumber  TokenizableIdentityField = "PhoneNumber"
+	TokenizableFieldStreet       TokenizableIdentityField = "Street"
+	TokenizableFieldPostCode     TokenizableIdentityField = "PostCode"
+)
+
+// TokenizeFieldResponse is returned when a single identity field is tokenized.
+type TokenizeFieldResponse struct {
+	Message string `json:"message"`
+}
+
 func (s *IdentityService) Create(identity Identity) (*IdentityResponse, *http.Response, error) {
 	//validate the identity
 	if err := ValidateCreateIdentity(identity); err != nil {
@@ -106,6 +124,27 @@ func (s *IdentityService) Filter(params FilterParams) (*FilterResponse, *http.Re
 	}
 
 	return &filterResponse, resp, nil
+}
+
+// TokenizeField tokenizes a single PII field on an identity.
+func (s *IdentityService) TokenizeField(identityID string, field string) (*TokenizeFieldResponse, *http.Response, error) {
+	if err := ValidateTokenizeIdentityField(identityID, field); err != nil {
+		return nil, nil, err
+	}
+
+	u := fmt.Sprintf("identities/%s/tokenize/%s", identityID, field)
+	req, err := s.client.NewRequest(u, http.MethodPost, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tokenizeResp := new(TokenizeFieldResponse)
+	resp, err := s.client.CallWithRetry(req, tokenizeResp)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return tokenizeResp, resp, nil
 }
 
 func NewIdentityService(client ClientInterface) *IdentityService {

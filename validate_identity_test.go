@@ -99,3 +99,15 @@ func TestIdentity_Update_JSONMarshal_IncludesEmptyStrings(t *testing.T) {
 	require.Equal(t, "", decoded["post_code"])
 	require.Equal(t, "", decoded["city"])
 }
+
+func TestValidateIdentityID(t *testing.T) {
+	require.NoError(t, blnkgo.ValidateIdentityID("idt_test_123"))
+	require.Error(t, blnkgo.ValidateIdentityID(""))
+	require.Error(t, blnkgo.ValidateIdentityID("   "))
+}
+
+func TestValidateTokenizeIdentityField(t *testing.T) {
+	require.NoError(t, blnkgo.ValidateTokenizeIdentityField("idt_test_123", "FirstName"))
+	require.Error(t, blnkgo.ValidateTokenizeIdentityField("", "FirstName"))
+	require.Error(t, blnkgo.ValidateTokenizeIdentityField("idt_test_123", ""))
+}
