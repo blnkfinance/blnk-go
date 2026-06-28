@@ -608,3 +608,77 @@ func TestIdentityService_Tokenize_RequestCreationFailure(t *testing.T) {
 	assert.Nil(t, httpResp)
 	mockClient.AssertExpectations(t)
 }
+
+func TestIdentityService_GetTokenizedFields_Success(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	identityID := "idt_573ebcc9-4da0-4295-82dc-0fb152b56660"
+	path := "identities/" + identityID + "/tokenized-fields"
+
+	mockClient.On("NewRequest", path, http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.GetTokenizedFieldsResponse)
+		*resp = blnkgo.GetTokenizedFieldsResponse{
+			TokenizedFields: []blnkgo.TokenizableIdentityField{
+				blnkgo.TokenizableFieldFirstName,
+				blnkgo.TokenizableFieldEmailAddress,
+			},
+		}
+	})
+
+	fields, httpResp, err := svc.GetTokenizedFields(identityID)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Len(t, fields.TokenizedFields, 2)
+	assert.Equal(t, blnkgo.TokenizableFieldFirstName, fields.TokenizedFields[0])
+	mockClient.AssertExpectations(t)
+}
+
+func TestIdentityService_GetTokenizedFields_EmptyList(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	identityID := "idt_test_123"
+	path := "identities/" + identityID + "/tokenized-fields"
+
+	mockClient.On("NewRequest", path, http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.GetTokenizedFieldsResponse)
+		*resp = blnkgo.GetTokenizedFieldsResponse{TokenizedFields: []blnkgo.TokenizableIdentityField{}}
+	})
+
+	fields, httpResp, err := svc.GetTokenizedFields(identityID)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Empty(t, fields.TokenizedFields)
+	mockClient.AssertExpectations(t)
+}
+
+func TestIdentityService_GetTokenizedFields_ValidationError(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	_, _, err := svc.GetTokenizedFields("")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "identity id is required")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestIdentityService_GetTokenizedFields_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	identityID := "idt_test_123"
+	path := "identities/" + identityID + "/tokenized-fields"
+
+	mockClient.On("NewRequest", path, http.MethodGet, nil).Return(nil, errors.New("failed to create request"))
+
+	fields, httpResp, err := svc.GetTokenizedFields(identityID)
+
+	assert.Error(t, err)
+	assert.Nil(t, fields)
+	assert.Nil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}
