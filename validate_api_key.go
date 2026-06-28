@@ -26,3 +26,14 @@ func ValidateCreateApiKeyRequest(body CreateApiKeyRequest) error {
 	}
 	return nil
 }
+
+// ValidateListApiKeysOptions performs client-side checks before GET /api-keys.
+func ValidateListApiKeysOptions(options *ListApiKeysOptions) error {
+	if options == nil {
+		return nil
+	}
+	if options.Owner != "" && strings.TrimSpace(options.Owner) == "" {
+		return fmt.Errorf("owner must be a non-empty string")
+	}
+	return nil
+}

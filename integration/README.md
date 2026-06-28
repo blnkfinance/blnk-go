@@ -28,6 +28,7 @@ go test -tags=integration -v ./integration/... -run Issue44
 go test -tags=integration -v ./integration/... -run Issue36
 go test -tags=integration -v ./integration/... -run Issue61
 go test -tags=integration -v ./integration/... -run Issue58
+go test -tags=integration -v ./integration/... -run Issue59
 
 # all integration tests
 go test -tags=integration -v ./integration/... 
@@ -60,6 +61,7 @@ go test -tags=integration -v ./integration/...
 | #36 transaction lineage | 0.14.x+ | Not 0.15-only |
 | #61 health check | 0.14.x+ | GET /health; auth not required |
 | #58 create api key | 0.14.x+ | POST /api-keys; master or api-keys:write key |
+| #59 list api keys | 0.14.x+ | GET /api-keys?owner=; master requires owner |
 | 0.15-only features (delete identity, hooks, etc.) | 0.15.0 | Test when we reach remaining Go 1.3.0 issues |
 
 If `BLNK_API_KEY` is unset, integration tests skip.

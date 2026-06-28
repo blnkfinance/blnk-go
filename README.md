@@ -825,6 +825,20 @@ fmt.Println("Key ID:", apiKey.ApiKeyID)
 fmt.Println("Secret:", apiKey.Key) // store securely; shown once on create
 ```
 
+List API keys for an owner (master key requires the `owner` query parameter):
+
+```go
+keys, resp, err := client.ApiKeys.List(&blnkgo.ListApiKeysOptions{
+    Owner: "team_acme",
+})
+if err != nil {
+    log.Fatal(err)
+}
+for _, key := range keys {
+    fmt.Println(key.ApiKeyID, key.Name, key.Scopes)
+}
+```
+
 ### Search
 
 Search across ledgers, balances, and transactions with flexible query parameters.

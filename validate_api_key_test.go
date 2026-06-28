@@ -22,3 +22,10 @@ func TestValidateCreateApiKeyRequest(t *testing.T) {
 	assert.Error(t, ValidateCreateApiKeyRequest(CreateApiKeyRequest{Name: "n", Owner: "o", Scopes: []string{""}, ExpiresAt: valid.ExpiresAt}))
 	assert.Error(t, ValidateCreateApiKeyRequest(CreateApiKeyRequest{Name: "n", Owner: "o", Scopes: []string{"s"}}))
 }
+
+func TestValidateListApiKeysOptions(t *testing.T) {
+	assert.NoError(t, ValidateListApiKeysOptions(nil))
+	assert.NoError(t, ValidateListApiKeysOptions(&ListApiKeysOptions{}))
+	assert.NoError(t, ValidateListApiKeysOptions(&ListApiKeysOptions{Owner: "owner_1"}))
+	assert.Error(t, ValidateListApiKeysOptions(&ListApiKeysOptions{Owner: "   "}))
+}

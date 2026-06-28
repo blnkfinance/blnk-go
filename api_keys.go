@@ -49,6 +49,36 @@ func (s *ApiKeysService) Create(body CreateApiKeyRequest) (*ApiKeyResponse, *htt
 	return apiKeyResp, resp, nil
 }
 
+// ListApiKeysOptions filters GET /api-keys results.
+type ListApiKeysOptions struct {
+	Owner string `url:"owner,omitempty"`
+}
+
+// List returns API keys for an owner. Pass ListApiKeysOptions with Owner when using a master key.
+func (s *ApiKeysService) List(options *ListApiKeysOptions) ([]ApiKeyResponse, *http.Response, error) {
+	if err := ValidateListApiKeysOptions(options); err != nil {
+		return nil, nil, err
+	}
+
+	var query interface{}
+	if options != nil {
+		query = options
+	}
+
+	req, err := s.client.NewRequest("api-keys", http.MethodGet, query)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var keys []ApiKeyResponse
+	resp, err := s.client.CallWithRetry(req, &keys)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return keys, resp, nil
+}
+
 func NewApiKeysService(client ClientInterface) *ApiKeysService {
 	return &ApiKeysService{client: client}
 }
