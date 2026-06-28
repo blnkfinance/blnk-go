@@ -49,3 +49,19 @@ func ValidateTokenizeIdentityField(identityID, field string) error {
 	}
 	return nil
 }
+
+// ValidateTokenizeIdentityRequest performs client-side checks before POST /identities/{id}/tokenize.
+func ValidateTokenizeIdentityRequest(identityID string, body TokenizeRequest) error {
+	if err := ValidateIdentityID(identityID); err != nil {
+		return err
+	}
+	if len(body.Fields) == 0 {
+		return fmt.Errorf("at least one field must be specified")
+	}
+	for _, field := range body.Fields {
+		if strings.TrimSpace(string(field)) == "" {
+			return fmt.Errorf("each field must be a non-empty string")
+		}
+	}
+	return nil
+}

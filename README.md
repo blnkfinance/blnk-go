@@ -696,6 +696,22 @@ if err != nil {
 fmt.Println(tokenized.Message) // Field tokenized successfully
 ```
 
+Tokenize multiple PII fields in one request:
+
+```go
+tokenized, resp, err := client.Identity.Tokenize(identity.IdentityId, blnkgo.TokenizeRequest{
+    Fields: []blnkgo.TokenizableIdentityField{
+        blnkgo.TokenizableFieldFirstName,
+        blnkgo.TokenizableFieldLastName,
+        blnkgo.TokenizableFieldEmailAddress,
+    },
+})
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(tokenized.Message) // Fields tokenized successfully
+```
+
 ### Reconciliation
 
 The reconciliation feature allows you to match and verify transactions against external data sources.
