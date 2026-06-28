@@ -942,6 +942,24 @@ balances, resp, err := client.Search.SearchBalances(searchParams)
 ledgers, resp, err := client.Search.SearchLedgers(searchParams)
 ```
 
+Start a Typesense reindex and poll progress:
+
+```go
+started, resp, err := client.Search.StartReindex(&blnkgo.StartReindexRequest{
+    BatchSize: intPtr(1000),
+})
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(started.Message, started.Progress.Status)
+
+progress, resp, err := client.Search.GetReindexStatus()
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(progress.Status, progress.Phase, progress.ProcessedRecords, progress.TotalRecords)
+```
+
 ---
 
 ## 8. Examples
