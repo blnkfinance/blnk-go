@@ -316,3 +316,50 @@ func TestBalanceMonitorService_Update_ServerError(t *testing.T) {
 	assert.Contains(t, err.Error(), "server error")
 	mockClient.AssertExpectations(t)
 }
+
+func TestBalanceMonitorService_Delete_Success(t *testing.T) {
+	mockClient, svc := setupBalanceMonitorService()
+
+	monitorID := "mon_test_123"
+	path := "balance-monitors/" + monitorID
+
+	mockClient.On("NewRequest", path, http.MethodDelete, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.DeleteBalanceMonitorResponse)
+		*resp = blnkgo.DeleteBalanceMonitorResponse{Message: "BalanceMonitor deleted successfully"}
+	})
+
+	deleted, httpResp, err := svc.Delete(monitorID)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Equal(t, "BalanceMonitor deleted successfully", deleted.Message)
+	mockClient.AssertExpectations(t)
+}
+
+func TestBalanceMonitorService_Delete_ValidationError(t *testing.T) {
+	mockClient, svc := setupBalanceMonitorService()
+
+	_, _, err := svc.Delete("")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "monitor id is required")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestBalanceMonitorService_Delete_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupBalanceMonitorService()
+
+	monitorID := "mon_test_123"
+	path := "balance-monitors/" + monitorID
+
+	mockClient.On("NewRequest", path, http.MethodDelete, nil).Return(nil, errors.New("failed to create request"))
+
+	deleted, httpResp, err := svc.Delete(monitorID)
+
+	assert.Error(t, err)
+	assert.Nil(t, deleted)
+	assert.Nil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}

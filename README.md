@@ -612,6 +612,16 @@ if err != nil {
 fmt.Printf("Monitor Created: %+v\n", monitor)
 ```
 
+Delete a balance monitor (Core 0.15.0+):
+
+```go
+deleted, resp, err := client.BalanceMonitor.Delete(monitor.MonitorID)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(deleted.Message) // BalanceMonitor deleted successfully
+```
+
 ### Identity Management
 
 Manage customer or organizational identities within your ledger system.
