@@ -349,7 +349,7 @@ fmt.Printf("Transaction Recorded: %+v\n", newTransaction)
 
 ### Recording Bulk Transactions
 
-Submit multiple transactions in a single request. Set `Atomic` to ensure all transactions succeed or fail together:
+Submit multiple transactions in a single request (up to `MaxBulkCreateItems`, 10,000 per request). Set `Atomic` to ensure all transactions succeed or fail together:
 
 ```go
 bulkBody := blnkgo.CreateBulkTransactionRequest{

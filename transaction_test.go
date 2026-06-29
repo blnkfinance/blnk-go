@@ -1168,6 +1168,20 @@ func TestTransactionService_CreateBulk_EmptyTransactions(t *testing.T) {
 	mockClient.AssertNotCalled(t, "CallWithRetry")
 }
 
+func TestTransactionService_CreateBulk_TooManyTransactions(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	txns := make([]blnkgo.CreateTransactionRequest, blnkgo.MaxBulkCreateItems+1)
+
+	result, resp, err := svc.CreateBulk(blnkgo.CreateBulkTransactionRequest{Transactions: txns})
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "too many transactions")
+	assert.Nil(t, result)
+	assert.Nil(t, resp)
+	mockClient.AssertNotCalled(t, "NewRequest")
+	mockClient.AssertNotCalled(t, "CallWithRetry")
+}
+
 func TestTransactionService_CreateBulk_InvalidTransaction(t *testing.T) {
 	mockClient, svc := setupTransactionService()
 	body := validBulkTransactionRequest()

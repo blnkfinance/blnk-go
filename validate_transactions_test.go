@@ -1,6 +1,7 @@
 package blnkgo_test
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -162,4 +163,39 @@ func TestValidateCreateTransaction_PreciseAmountWithPreciseDistributionStillVali
 	err := blnkgo.ValidateCreateTransacation(txn)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "does not equal")
+}
+
+func bulkCreateTransactions(n int) []blnkgo.CreateTransactionRequest {
+	txns := make([]blnkgo.CreateTransactionRequest, n)
+	for i := range txns {
+		txns[i] = blnkgo.CreateTransactionRequest{
+			ParentTransaction: blnkgo.ParentTransaction{
+				Amount:      100,
+				Reference:   fmt.Sprintf("bulk-ref-%d", i),
+				Precision:   100,
+				Currency:    "USD",
+				Source:      "@FundingPool",
+				Destination: "@Recipient",
+				Description: "Bulk transaction",
+			},
+		}
+	}
+	return txns
+}
+
+func TestValidateCreateBulkTransaction_AtLimit(t *testing.T) {
+	body := blnkgo.CreateBulkTransactionRequest{
+		Transactions: bulkCreateTransactions(blnkgo.MaxBulkCreateItems),
+	}
+	require.NoError(t, blnkgo.ValidateCreateBulkTransaction(body))
+}
+
+func TestValidateCreateBulkTransaction_OverLimit(t *testing.T) {
+	body := blnkgo.CreateBulkTransactionRequest{
+		Transactions: bulkCreateTransactions(blnkgo.MaxBulkCreateItems + 1),
+	}
+	err := blnkgo.ValidateCreateBulkTransaction(body)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "too many transactions")
+	require.Contains(t, err.Error(), "10000")
 }
