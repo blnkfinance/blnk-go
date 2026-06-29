@@ -752,6 +752,16 @@ if err != nil {
 fmt.Println(detokenized.Fields["FirstName"], detokenized.Fields["EmailAddress"])
 ```
 
+Delete an identity (Core 0.15.0+):
+
+```go
+deleted, resp, err := client.Identity.Delete(identity.IdentityId)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(deleted.Message) // Identity deleted successfully
+```
+
 ### Reconciliation
 
 The reconciliation feature allows you to match and verify transactions against external data sources.
