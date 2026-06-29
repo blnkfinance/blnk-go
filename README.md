@@ -844,6 +844,11 @@ reconBody := blnkgo.RunReconData{
 }
 
 reconResp, resp, err := client.Reconciliation.Run(reconBody)
+if err != nil {
+    log.Fatal(err)
+}
+// reconResp.ReconciliationID — use webhooks or GET /reconciliation/{id} for results (Core 0.15.0+)
+fmt.Println(reconResp.ReconciliationID)
 ```
 
 #### Run Instant Reconciliation
