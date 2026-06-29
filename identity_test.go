@@ -842,3 +842,50 @@ func TestIdentityService_Detokenize_RequestCreationFailure(t *testing.T) {
 	assert.Nil(t, httpResp)
 	mockClient.AssertExpectations(t)
 }
+
+func TestIdentityService_Delete_Success(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	identityID := "idt_573ebcc9-4da0-4295-82dc-0fb152b56660"
+	path := "identities/" + identityID
+
+	mockClient.On("NewRequest", path, http.MethodDelete, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*blnkgo.DeleteIdentityResponse)
+		*resp = blnkgo.DeleteIdentityResponse{Message: "Identity deleted successfully"}
+	})
+
+	deleted, httpResp, err := svc.Delete(identityID)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Equal(t, "Identity deleted successfully", deleted.Message)
+	mockClient.AssertExpectations(t)
+}
+
+func TestIdentityService_Delete_ValidationError(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	_, _, err := svc.Delete("")
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "identity id is required")
+	mockClient.AssertNotCalled(t, "NewRequest", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestIdentityService_Delete_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupIdentityService()
+
+	identityID := "idt_test_123"
+	path := "identities/" + identityID
+
+	mockClient.On("NewRequest", path, http.MethodDelete, nil).Return(nil, errors.New("failed to create request"))
+
+	deleted, httpResp, err := svc.Delete(identityID)
+
+	assert.Error(t, err)
+	assert.Nil(t, deleted)
+	assert.Nil(t, httpResp)
+	mockClient.AssertExpectations(t)
+}

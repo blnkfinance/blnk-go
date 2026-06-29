@@ -85,6 +85,11 @@ type DetokenizeResponse struct {
 	Fields map[string]string `json:"fields"`
 }
 
+// DeleteIdentityResponse is returned when an identity is deleted.
+type DeleteIdentityResponse struct {
+	Message string `json:"message"`
+}
+
 func (s *IdentityService) Create(identity Identity) (*IdentityResponse, *http.Response, error) {
 	//validate the identity
 	if err := ValidateCreateIdentity(identity); err != nil {
@@ -261,6 +266,26 @@ func (s *IdentityService) Detokenize(identityID string, body DetokenizeRequest) 
 	}
 
 	return detokenizeResp, resp, nil
+}
+
+// Delete removes an identity by ID (Core 0.15.0+).
+func (s *IdentityService) Delete(identityID string) (*DeleteIdentityResponse, *http.Response, error) {
+	if err := ValidateIdentityID(identityID); err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest(fmt.Sprintf("identities/%s", identityID), http.MethodDelete, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	deleteResp := new(DeleteIdentityResponse)
+	resp, err := s.client.CallWithRetry(req, deleteResp)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return deleteResp, resp, nil
 }
 
 func NewIdentityService(client ClientInterface) *IdentityService {
