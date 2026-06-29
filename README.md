@@ -25,6 +25,7 @@ The official Go SDK for Blnk - A powerful ledger system for financial applicatio
   - [Identity Management](#identity-management)
   - [Reconciliation](#reconciliation)
   - [Search](#search)
+  - [Error Handling](#error-handling)
 - [8. Examples](#8-examples)
 - [Additional Resources](#additional-resources)
 
@@ -1053,6 +1054,32 @@ if err != nil {
 }
 fmt.Println(progress.Status, progress.Phase, progress.ProcessedRecords, progress.TotalRecords)
 ```
+
+### Error Handling
+
+Core 0.15.0+ returns structured errors with an `error_detail` object. When a service method returns an error, use `errors.As` to read the stable machine code — do not branch on message text:
+
+```go
+_, resp, err := client.Transaction.Get("txn_missing")
+if err != nil {
+    var apiErr *blnkgo.ApiErrorResponse
+    if errors.As(err, &apiErr) && apiErr.ErrorDetail != nil {
+        switch apiErr.ErrorDetail.Code {
+        case "TXN_NOT_FOUND":
+            // handle missing transaction
+        case "GEN_CONFLICT":
+            // handle conflict
+        default:
+            fmt.Printf("API error %s: %s\n", apiErr.ErrorDetail.Code, apiErr.ErrorDetail.Message)
+        }
+    }
+    return
+}
+```
+
+Legacy responses with only a flat `"error"` string are mapped to `ErrorDetail.Code == "UNKNOWN"`. The raw response body remains available on `ApiErrorResponse.Body` for backward compatibility.
+
+See [Blnk error codes](https://docs.blnkfinance.com/advanced/error-codes) for the full catalog.
 
 ---
 
