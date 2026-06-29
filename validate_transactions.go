@@ -88,6 +88,9 @@ func ValidateCreateBulkTransaction(b CreateBulkTransactionRequest) error {
 	if len(b.Transactions) == 0 {
 		return errors.New("validation error: transactions array cannot be empty")
 	}
+	if len(b.Transactions) > MaxBulkCreateItems {
+		return fmt.Errorf("validation error: too many transactions; max is %d", MaxBulkCreateItems)
+	}
 
 	refs := make(map[string]struct{}, len(b.Transactions))
 	for i, tx := range b.Transactions {

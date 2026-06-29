@@ -85,6 +85,10 @@ type RefundTransactionRequest struct {
 // bulk commit or bulk void call.
 const MaxBulkInflightItems = 100
 
+// MaxBulkCreateItems caps the number of transactions accepted in a single
+// CreateBulk call (POST /transactions/bulk).
+const MaxBulkCreateItems = 10000
+
 // BulkCommitInflightItem describes one transaction in a bulk commit request.
 // Zero amount means commit the full remaining inflight amount; non-zero performs
 // a partial commit. PreciseAmount, when set, takes precedence over Amount.
