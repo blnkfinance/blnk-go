@@ -1,6 +1,9 @@
 package blnkgo
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+)
 
 type BalanceMonitorService service
 
@@ -24,6 +27,11 @@ type MonitorDataResp struct {
 	MonitorData
 	MonitorID string `json:"monitor_id"`
 	CreatedAt string `json:"created_at"` // ISO date string
+}
+
+// DeleteBalanceMonitorResponse is returned when a balance monitor is deleted.
+type DeleteBalanceMonitorResponse struct {
+	Message string `json:"message"`
 }
 
 func (s *BalanceMonitorService) Create(data MonitorData) (*MonitorDataResp, *http.Response, error) {
@@ -84,6 +92,26 @@ func (s *BalanceMonitorService) Update(monitorID string, data MonitorData) (*Mon
 	}
 
 	return monitorData, resp, nil
+}
+
+// Delete removes a balance monitor by ID (Core 0.15.0+).
+func (s *BalanceMonitorService) Delete(monitorID string) (*DeleteBalanceMonitorResponse, *http.Response, error) {
+	if err := ValidateMonitorID(monitorID); err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest(fmt.Sprintf("balance-monitors/%s", monitorID), http.MethodDelete, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	deleteResp := new(DeleteBalanceMonitorResponse)
+	resp, err := s.client.CallWithRetry(req, deleteResp)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return deleteResp, resp, nil
 }
 
 func NewBalanceMonitorService(client ClientInterface) *BalanceMonitorService {
