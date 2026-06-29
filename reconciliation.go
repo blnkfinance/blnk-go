@@ -44,6 +44,15 @@ type RunReconResp struct {
 	UpdatedAt string `json:"updated_at"`
 }
 
+// StartReconciliationResponse is returned when a reconciliation run is started
+// via POST /reconciliation/start or POST /reconciliation/start-instant (Core 0.15.0+).
+type StartReconciliationResponse struct {
+	ReconciliationID string `json:"reconciliation_id"`
+}
+
+// RunInstantReconResp is returned when instant reconciliation is started.
+type RunInstantReconResp = StartReconciliationResponse
+
 // DeleteMatchingRuleResp is returned when a matching rule is deleted.
 type DeleteMatchingRuleResp struct {
 	Message string `json:"message"`
@@ -68,11 +77,6 @@ type RunInstantReconData struct {
 	GroupingCriteria     CriteriaField          `json:"grouping_criteria,omitempty"`
 	DryRun               bool                   `json:"dry_run,omitempty"`
 	MatchingRuleIDs      []string               `json:"matching_rule_ids"`
-}
-
-// RunInstantReconResp is returned when instant reconciliation is started.
-type RunInstantReconResp struct {
-	ReconciliationID string `json:"reconciliation_id"`
 }
 
 // Reconciliation is the status and counts for a reconciliation run.
@@ -180,12 +184,12 @@ func (s *ReconciliationService) Get(reconciliationID string) (*Reconciliation, *
 	return recon, resp, nil
 }
 
-func (s *ReconciliationService) Run(data RunReconData) (*RunReconResp, *http.Response, error) {
+func (s *ReconciliationService) Run(data RunReconData) (*StartReconciliationResponse, *http.Response, error) {
 	req, err := s.client.NewRequest("reconciliation/start", http.MethodPost, data)
 	if err != nil {
 		return nil, nil, err
 	}
-	reconResp := new(RunReconResp)
+	reconResp := new(StartReconciliationResponse)
 	resp, err := s.client.CallWithRetry(req, reconResp)
 	if err != nil {
 		return nil, resp, err

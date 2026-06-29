@@ -121,14 +121,13 @@ func TestReconciliationService_Run_Success(t *testing.T) {
 		MatchingRuleIDs:  []string{"rule-123"},
 	}
 
-	expectedResp := &blnkgo.RunReconResp{
-		RuleID:    "rule-123",
-		CreatedAt: time.Now().Format(time.RFC3339),
+	expectedResp := &blnkgo.StartReconciliationResponse{
+		ReconciliationID: "recon_test_123",
 	}
 
 	mockClient.On("NewRequest", "reconciliation/start", http.MethodPost, data).Return(&http.Request{}, nil)
 	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
-		resp := args.Get(1).(*blnkgo.RunReconResp)
+		resp := args.Get(1).(*blnkgo.StartReconciliationResponse)
 		*resp = *expectedResp
 	})
 
@@ -139,6 +138,13 @@ func TestReconciliationService_Run_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
 	assert.Equal(t, expectedResp, resp)
 	mockClient.AssertExpectations(t)
+}
+
+func TestReconciliationService_Run_ResponseUnmarshalJSON(t *testing.T) {
+	var resp blnkgo.StartReconciliationResponse
+	err := json.Unmarshal([]byte(`{"reconciliation_id":"recon_abc123"}`), &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, "recon_abc123", resp.ReconciliationID)
 }
 
 func TestReconciliationService_Run_RequestCreationFailure(t *testing.T) {

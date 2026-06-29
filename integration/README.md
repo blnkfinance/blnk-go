@@ -77,5 +77,6 @@ go test -tags=integration -v ./integration/...
 | #49 detokenize identity | 0.13.2+ | POST /identities/{id}/detokenize; tokenization must be enabled |
 | #117 delete identity | 0.15.0+ | DELETE /identities/{id} |
 | #118 delete balance monitor | 0.15.0+ | DELETE /balance-monitors/{id} |
+| #119 reconciliation run response | 0.15.0+ | POST /reconciliation/start returns reconciliation_id only |
 
 If `BLNK_API_KEY` is unset, integration tests skip.

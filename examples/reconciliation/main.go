@@ -61,5 +61,5 @@ func main() {
 	}
 
 	fmt.Print(resp.StatusCode)
-	fmt.Printf("%+v\n", runRecon)
+	fmt.Println(runRecon.ReconciliationID)
 }
