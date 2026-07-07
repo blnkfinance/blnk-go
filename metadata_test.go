@@ -20,7 +20,7 @@ func TestTransactionService_UpdateMetadata(t *testing.T) {
 	tests := []struct {
 		name        string
 		entityID    string
-		metadata    map[string]interface{}
+		metadata    blnkgo.MetaData
 		expectError bool
 		errorMsg    string
 		statusCode  int
@@ -29,7 +29,7 @@ func TestTransactionService_UpdateMetadata(t *testing.T) {
 		{
 			name:     "successful metadata update",
 			entityID: "entity-123",
-			metadata: map[string]interface{}{
+			metadata: blnkgo.MetaData{
 				"key1": "value1",
 				"key2": 42,
 				"key3": true,
@@ -38,7 +38,7 @@ func TestTransactionService_UpdateMetadata(t *testing.T) {
 			statusCode:  http.StatusOK,
 			setupMocks: func(m *MockClient) {
 				expectedResponse := &blnkgo.UpdateMetaDataRequest{
-					MetaData: map[string]interface{}{
+					MetaData: blnkgo.MetaData{
 						"key1": "value1",
 						"key2": 42,
 						"key3": true,
@@ -61,7 +61,7 @@ func TestTransactionService_UpdateMetadata(t *testing.T) {
 		{
 			name:        "empty entity ID",
 			entityID:    "",
-			metadata:    map[string]interface{}{"key": "value"},
+			metadata:    blnkgo.MetaData{"key": "value"},
 			expectError: true,
 			errorMsg:    "entity ID is required",
 			setupMocks:  func(m *MockClient) {},
@@ -69,7 +69,7 @@ func TestTransactionService_UpdateMetadata(t *testing.T) {
 		{
 			name:        "request creation failure",
 			entityID:    "entity-123",
-			metadata:    map[string]interface{}{"key": "value"},
+			metadata:    blnkgo.MetaData{"key": "value"},
 			expectError: true,
 			errorMsg:    "failed to create request",
 			setupMocks: func(m *MockClient) {
@@ -80,7 +80,7 @@ func TestTransactionService_UpdateMetadata(t *testing.T) {
 		{
 			name:        "server error",
 			entityID:    "entity-123",
-			metadata:    map[string]interface{}{"key": "value"},
+			metadata:    blnkgo.MetaData{"key": "value"},
 			expectError: true,
 			errorMsg:    "server error",
 			statusCode:  http.StatusInternalServerError,
@@ -95,7 +95,7 @@ func TestTransactionService_UpdateMetadata(t *testing.T) {
 		{
 			name:        "entity not found",
 			entityID:    "nonexistent-123",
-			metadata:    map[string]interface{}{"key": "value"},
+			metadata:    blnkgo.MetaData{"key": "value"},
 			expectError: true,
 			errorMsg:    "entity not found",
 			statusCode:  http.StatusNotFound,

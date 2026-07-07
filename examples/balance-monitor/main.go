@@ -13,7 +13,7 @@ func main() {
 
 	ledgerBody := blnkgo.CreateLedgerRequest{
 		Name: "Ledge",
-		MetaData: map[string]interface{}{
+		MetaData: blnkgo.MetaData{
 			"project_name": "SendWorldApp",
 		},
 	}
@@ -31,7 +31,7 @@ func main() {
 	ledgerBalanceBody := blnkgo.CreateLedgerBalanceRequest{
 		LedgerID: ledger.LedgerID,
 		Currency: "USD",
-		MetaData: map[string]interface{}{
+		MetaData: blnkgo.MetaData{
 			"customer_name": "SendWorldApp",
 		},
 	}

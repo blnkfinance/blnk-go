@@ -26,7 +26,7 @@ type Identity struct {
 	State            string                 `json:"state"`
 	PostCode         string                 `json:"post_code"`
 	City             string                 `json:"city"`
-	MetaData         map[string]interface{} `json:"meta_data,omitempty"`
+	MetaData         MetaData     `json:"meta_data,omitempty"`
 }
 
 type IdentityResponse struct {

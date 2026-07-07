@@ -111,7 +111,7 @@ func TestUpdateTransaction(t *testing.T) {
 					Currency:    "USD",
 					Source:      "@bank-account",
 					Destination: "@World",
-					MetaData: map[string]interface{}{
+					MetaData: blnkgo.MetaData{
 						"transaction_type": "deposit",
 						"customer_name":    "Alice Johnson",
 						"customer_id":      "alice-5786",
@@ -271,7 +271,7 @@ func TestCreateTransactionSuccess(t *testing.T) {
 			Currency:    "USD",
 			Source:      "@bank-account",
 			Destination: "@World",
-			MetaData: map[string]interface{}{
+			MetaData: blnkgo.MetaData{
 				"transaction_type": "deposit",
 				"customer_name":    "Alice Johnson",
 				"customer_id":      "alice-5786",
@@ -908,7 +908,7 @@ func TestCreateTransactionWithInflightCommitDate(t *testing.T) {
 			Currency:    "USD",
 			Source:      "@bank-account",
 			Destination: "@World",
-			MetaData: map[string]interface{}{
+			MetaData: blnkgo.MetaData{
 				"transaction_type": "deposit",
 				"customer_name":    "Bob Smith",
 				"customer_id":      "bob-1234",
@@ -955,7 +955,7 @@ func TestCreateTransactionWithInflightExpiryAndCommitDate(t *testing.T) {
 			Currency:    "EUR",
 			Source:      "@escrow-account",
 			Destination: "@merchant",
-			MetaData: map[string]interface{}{
+			MetaData: blnkgo.MetaData{
 				"transaction_type": "escrow_release",
 				"order_id":         "order-9876",
 			},

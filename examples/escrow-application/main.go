@@ -30,7 +30,7 @@ func main() {
 	escrowBalanceBody := blnkgo.CreateLedgerBalanceRequest{
 		LedgerID: esrowLedger.LedgerID,
 		Currency: "USD",
-		MetaData: map[string]interface{}{
+		MetaData: blnkgo.MetaData{
 			"account_type":        "Escrow",
 			"customer_name":       "Alice Johnson",
 			"customer_id":         "CUST001",
@@ -49,7 +49,7 @@ func main() {
 	escrowBalanceBody2 := blnkgo.CreateLedgerBalanceRequest{
 		LedgerID: esrowLedger.LedgerID,
 		Currency: "USD",
-		MetaData: map[string]interface{}{
+		MetaData: blnkgo.MetaData{
 			"account_type":        "Escrow",
 			"customer_name":       "Bob Smith",
 			"customer_id":         "CUST002",
@@ -72,7 +72,7 @@ func main() {
 			Currency:    "USD",
 			Source:      "@bank-account",
 			Destination: escrowBalance.BalanceID,
-			MetaData: map[string]interface{}{
+			MetaData: blnkgo.MetaData{
 				"transaction_type": "deposit",
 				"customer_name":    "Alice Johnson",
 				"customer_id":      "alice-5786",
@@ -100,7 +100,7 @@ func main() {
 			Currency:    "USD",
 			Source:      escrowBalance.BalanceID,
 			Destination: escrowBalance2.BalanceID,
-			MetaData: map[string]interface{}{
+			MetaData: blnkgo.MetaData{
 				"transaction_type": "release",
 				"customer_name":    "Bob Smith",
 				"customer_id":      "bob-5786",
@@ -126,7 +126,7 @@ func main() {
 			Currency:    "USD",
 			Source:      escrowBalance2.BalanceID,
 			Destination: escrowBalance.BalanceID,
-			MetaData: map[string]interface{}{
+			MetaData: blnkgo.MetaData{
 				"transaction_type": "refund",
 				"customer_name":    "Alice Johnson",
 				"customer_id":      "alice-5786",
