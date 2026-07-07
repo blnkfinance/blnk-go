@@ -6,7 +6,7 @@ import (
 )
 
 // MetaData is a flexible key-value metadata map attached to Blnk resources.
-type MetaData map[string]interface{}
+type MetaData = map[string]interface{}
 
 type MetadataService service
 
