@@ -143,7 +143,7 @@ func main() {
     // Create a new ledger
     ledgerBody := blnkgo.CreateLedgerRequest{
         Name: "Customer Savings Account",
-        MetaData: map[string]interface{}{
+        MetaData: blnkgo.MetaData{
             "project_owner": "YOUR_APP_NAME",
         },
     }
@@ -213,7 +213,7 @@ To create a balance, specify the `ledger_id` and other details:
 balanceBody := blnkgo.CreateLedgerBalanceRequest{
     LedgerID: "ldg_073f7ffe-9dfd-42ce-aa50-d1dca1788adc",
     Currency: "USD",
-    MetaData: map[string]interface{}{
+    MetaData: blnkgo.MetaData{
         "first_name":     "Alice",
         "last_name":      "Hart",
         "account_number": "1234567890",
@@ -332,7 +332,7 @@ transactionBody := blnkgo.CreateTransactionRequest{
         Source:      "bln_28edb3e5-c168-4127-a1c4-16274e7a28d3",
         Destination: "bln_ebcd230f-6265-4d4a-a4ca-45974c47f746",
         Description: "Sent from app",
-        MetaData: map[string]interface{}{
+        MetaData: blnkgo.MetaData{
             "sender_name":    "John Doe",
             "sender_account": "00000000000",
         },
@@ -641,7 +641,7 @@ identityBody := blnkgo.Identity{
     State:        "NY",
     Country:      "USA",
     PostCode:     "10001",
-    MetaData: map[string]interface{}{
+    MetaData: blnkgo.MetaData{
         "customer_tier": "premium",
     },
 }

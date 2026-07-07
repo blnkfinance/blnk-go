@@ -28,7 +28,7 @@ type LedgerBalance struct {
 	Currency              string                 `json:"currency"`
 	CreatedAt             time.Time              `json:"created_at"`
 	InflightExpiresAt     time.Time              `json:"inflight_expires_at"`
-	MetaData              map[string]interface{} `json:"meta_data,omitempty"`
+	MetaData              MetaData           `json:"meta_data,omitempty"`
 	TrackFundLineage      bool                   `json:"track_fund_lineage,omitempty"`
 	AllocationStrategy    AllocationStrategy     `json:"allocation_strategy,omitempty"`
 }
@@ -39,7 +39,7 @@ type CreateLedgerBalanceRequest struct {
 	Currency           string                 `json:"currency"`
 	TrackFundLineage   bool                   `json:"track_fund_lineage,omitempty"`
 	AllocationStrategy AllocationStrategy     `json:"allocation_strategy,omitempty"`
-	MetaData           map[string]interface{} `json:"meta_data,omitempty"`
+	MetaData           MetaData           `json:"meta_data,omitempty"`
 }
 
 // GetBalanceRequest holds optional query parameters for LedgerBalance.Get.

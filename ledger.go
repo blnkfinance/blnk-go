@@ -12,12 +12,12 @@ type Ledger struct {
 	LedgerID  string                 `json:"ledger_id"`
 	Name      string                 `json:"name"`
 	CreatedAt time.Time              `json:"created_at"`
-	MetaData  map[string]interface{} `json:"meta_data,omitempty"`
+	MetaData  MetaData  `json:"meta_data,omitempty"`
 }
 
 type CreateLedgerRequest struct {
-	Name     string                 `json:"name"`
-	MetaData map[string]interface{} `json:"meta_data,omitempty"`
+	Name     string   `json:"name"`
+	MetaData MetaData `json:"meta_data,omitempty"`
 }
 
 type UpdateLedgerRequest struct {

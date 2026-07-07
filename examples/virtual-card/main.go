@@ -16,7 +16,7 @@ func main() {
 
 	usdLedgerBody := blnkgo.CreateLedgerRequest{
 		Name: "USD Ledger",
-		MetaData: map[string]interface{}{
+		MetaData: blnkgo.MetaData{
 			"project_name": "USD virtual card",
 		},
 	}
@@ -30,7 +30,7 @@ func main() {
 	usdBalanceBody := blnkgo.CreateLedgerBalanceRequest{
 		LedgerID: usdLedger.LedgerID,
 		Currency: "USD",
-		MetaData: map[string]interface{}{
+		MetaData: blnkgo.MetaData{
 			"customer_name":        "Jerry",
 			"customer_internal_id": "1234",
 			"card_state":           "ACTIVE",
@@ -54,7 +54,7 @@ func main() {
 			Reference:   "ref-05",
 			Source:      "@World",
 			Destination: "@Merchant",
-			MetaData: map[string]interface{}{
+			MetaData: blnkgo.MetaData{
 				"merchant_name": "Store ABC",
 				"customer_name": "Jerry",
 			},
@@ -77,7 +77,7 @@ func main() {
 			Reference:   "ref-06",
 			Source:      "@Merchant",
 			Destination: usdBalance.BalanceID,
-			MetaData: map[string]interface{}{
+			MetaData: blnkgo.MetaData{
 				"merchant_name": "Store ABC",
 				"customer_name": "Jerry",
 			},

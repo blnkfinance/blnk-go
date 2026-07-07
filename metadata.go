@@ -5,14 +5,17 @@ import (
 	"net/http"
 )
 
+// MetaData is a flexible key-value metadata map attached to Blnk resources.
+type MetaData = map[string]interface{}
+
 type MetadataService service
 
 type UpdateMetaDataRequest struct {
-	MetaData map[string]interface{} `json:"meta_data"`
+	MetaData MetaData `json:"meta_data"`
 }
 
 type Metadata struct {
-	MetaData map[string]interface{} `json:"metadata"`
+	MetaData MetaData `json:"metadata"`
 }
 
 func (s *MetadataService) UpdateMetadata(entityID string, body UpdateMetaDataRequest) (*Metadata, *http.Response, error) {

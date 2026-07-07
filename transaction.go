@@ -32,7 +32,7 @@ type ParentTransaction struct {
 	SkipQueue     bool                   `json:"skip_queue"`
 	Atomic        bool                   `json:"atomic,omitempty"`
 	Status        PryTransactionStatus   `json:"status"`
-	MetaData      map[string]interface{} `json:"meta_data,omitempty"`
+	MetaData      MetaData             `json:"meta_data,omitempty"`
 	EffectiveDate *time.Time             `json:"effective_date"`
 }
 
