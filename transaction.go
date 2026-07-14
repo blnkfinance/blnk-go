@@ -310,6 +310,23 @@ func (s *TransactionService) GetByReference(reference string) (*Transaction, *ht
 	return transaction, resp, nil
 }
 
+// List returns transactions via GET /transactions.
+// Core applies default pagination (limit=20, offset=0) when query params are omitted.
+func (s *TransactionService) List() ([]Transaction, *http.Response, error) {
+	req, err := s.client.NewRequest("transactions", http.MethodGet, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var transactions []Transaction
+	resp, err := s.client.CallWithRetry(req, &transactions)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return transactions, resp, nil
+}
+
 func (s *TransactionService) Filter(params FilterParams) (*FilterResponse, *http.Response, error) {
 	req, err := s.client.NewRequest("transactions/filter", http.MethodPost, params)
 	if err != nil {

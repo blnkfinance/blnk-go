@@ -731,6 +731,80 @@ func TestTransactionService_Get(t *testing.T) {
 	}
 }
 
+func TestTransactionService_List_Success(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+
+	fixedTime := time.Date(2023, time.October, 1, 0, 0, 0, 0, time.UTC)
+	expectedResponse := []blnkgo.Transaction{
+		{
+			ParentTransaction: blnkgo.ParentTransaction{
+				Amount:   750,
+				Currency: "USD",
+				Status:   blnkgo.PryTransactionStatusApplied,
+			},
+			TransactionID: "txn_abc123",
+			CreatedAt:     fixedTime,
+		},
+		{
+			ParentTransaction: blnkgo.ParentTransaction{
+				Amount:   500,
+				Currency: "NGN",
+				Status:   blnkgo.PryTransactionStatusApplied,
+			},
+			TransactionID: "txn_def456",
+			CreatedAt:     fixedTime,
+		},
+	}
+
+	mockClient.On("NewRequest", "transactions", http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusOK,
+	}, nil).Run(func(args mock.Arguments) {
+		transactions := args.Get(1).(*[]blnkgo.Transaction)
+		*transactions = expectedResponse
+	})
+
+	transactions, resp, err := svc.List()
+
+	assert.NoError(t, err)
+	assert.Equal(t, expectedResponse, transactions)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	mockClient.AssertExpectations(t)
+}
+
+func TestTransactionService_List_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+
+	mockClient.On("NewRequest", "transactions", http.MethodGet, nil).Return(nil, fmt.Errorf("failed to create request"))
+
+	transactions, resp, err := svc.List()
+
+	assert.Error(t, err)
+	assert.Nil(t, transactions)
+	assert.Nil(t, resp)
+	assert.Contains(t, err.Error(), "failed to create request")
+	mockClient.AssertExpectations(t)
+}
+
+func TestTransactionService_List_ServerError(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+
+	mockClient.On("NewRequest", "transactions", http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusInternalServerError,
+	}, fmt.Errorf("server error"))
+
+	transactions, resp, err := svc.List()
+
+	assert.Error(t, err)
+	assert.Nil(t, transactions)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	assert.Contains(t, err.Error(), "server error")
+	mockClient.AssertExpectations(t)
+}
+
 func TestTransactionService_Filter_Success(t *testing.T) {
 	mockClient, svc := setupTransactionService()
 
