@@ -11,6 +11,26 @@ import (
 
 // Issue #126 — Core 0.15.0 dropped response fields (rate, currency_multiplier).
 // modification_ref was never modeled on Go SDK types.
+//
+// Compatibility: Rate and CurrencyMultiplier stay float64 so existing create
+// literals (Rate: 1.1) and field reads continue to compile.
+
+func TestIssue126_CreateRequest_RateLiteralSourceCompatible(t *testing.T) {
+	// Must keep compiling for customers upgrading the SDK.
+	req := blnkgo.CreateTransactionRequest{
+		ParentTransaction: blnkgo.ParentTransaction{
+			Amount:      100,
+			Reference:   "ref_rate_compat",
+			Precision:   100,
+			Currency:    "EUR",
+			Source:      "bln_source",
+			Destination: "bln_dest",
+			Rate:        1.1,
+			Description: "multi-currency",
+		},
+	}
+	assert.Equal(t, 1.1, req.Rate)
+}
 
 func TestIssue126_LedgerBalance_OmitsCurrencyMultiplier(t *testing.T) {
 	payload := `{
@@ -26,7 +46,7 @@ func TestIssue126_LedgerBalance_OmitsCurrencyMultiplier(t *testing.T) {
 
 	var balance blnkgo.LedgerBalance
 	require.NoError(t, json.Unmarshal([]byte(payload), &balance))
-	assert.Nil(t, balance.CurrencyMultiplier)
+	assert.Equal(t, 0.0, balance.CurrencyMultiplier)
 }
 
 func TestIssue126_LedgerBalance_LegacyCurrencyMultiplier(t *testing.T) {
@@ -44,8 +64,7 @@ func TestIssue126_LedgerBalance_LegacyCurrencyMultiplier(t *testing.T) {
 
 	var balance blnkgo.LedgerBalance
 	require.NoError(t, json.Unmarshal([]byte(payload), &balance))
-	require.NotNil(t, balance.CurrencyMultiplier)
-	assert.Equal(t, 100.0, *balance.CurrencyMultiplier)
+	assert.Equal(t, 100.0, balance.CurrencyMultiplier)
 }
 
 func TestIssue126_Transaction_OmitsRate(t *testing.T) {
@@ -64,10 +83,10 @@ func TestIssue126_Transaction_OmitsRate(t *testing.T) {
 
 	var txn blnkgo.Transaction
 	require.NoError(t, json.Unmarshal([]byte(payload), &txn))
-	assert.Nil(t, txn.Rate)
+	assert.Equal(t, 0.0, txn.Rate)
 }
 
-func TestIssue126_SearchDocument_IgnoresLegacyRate(t *testing.T) {
+func TestIssue126_SearchDocument_PreservesLegacyRate(t *testing.T) {
 	payload := `{
 		"id": "txn_test",
 		"transaction_id": "txn_test",
@@ -80,4 +99,18 @@ func TestIssue126_SearchDocument_IgnoresLegacyRate(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(payload), &doc))
 	assert.Equal(t, "txn_test", doc.TransactionID)
 	assert.Equal(t, "APPLIED", doc.Status)
+	assert.Equal(t, 1.0, doc.Rate)
+}
+
+func TestIssue126_SearchDocument_OmitsRate(t *testing.T) {
+	payload := `{
+		"id": "txn_test",
+		"transaction_id": "txn_test",
+		"status": "APPLIED",
+		"created_at": 1781028226
+	}`
+
+	var doc blnkgo.SearchDocument
+	require.NoError(t, json.Unmarshal([]byte(payload), &doc))
+	assert.Equal(t, 0.0, doc.Rate)
 }

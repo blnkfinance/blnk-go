@@ -35,12 +35,12 @@ func TestIssue126_DroppedResponseFields(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
-	require.Nil(t, balance.CurrencyMultiplier, "Core 0.15.0+ omits currency_multiplier")
+	require.Equal(t, 0.0, balance.CurrencyMultiplier, "Core 0.15.0+ omits currency_multiplier")
 
 	gotBalance, resp, err := client.LedgerBalance.Get(balance.BalanceID)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
-	require.Nil(t, gotBalance.CurrencyMultiplier)
+	require.Equal(t, 0.0, gotBalance.CurrencyMultiplier)
 
 	txn, resp, err := client.Transaction.Create(blnkgo.CreateTransactionRequest{
 		ParentTransaction: blnkgo.ParentTransaction{
@@ -52,10 +52,11 @@ func TestIssue126_DroppedResponseFields(t *testing.T) {
 			Destination: "@Issue126Dest",
 			Description: "Issue126 dropped fields probe",
 			SkipQueue:   true,
+			Rate:        1.1, // source-compatible create literal
 		},
 		AllowOverdraft: true,
 	})
 	require.NoError(t, err)
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
-	require.Nil(t, txn.Rate, "Core 0.15.0+ omits rate from responses")
+	require.Equal(t, 0.0, txn.Rate, "Core 0.15.0+ omits rate from responses")
 }
