@@ -199,6 +199,23 @@ if err != nil {
 fmt.Printf("Ledger Updated: %+v\n", updatedLedger)
 ```
 
+### Listing Ledgers
+
+Retrieve ledgers with `GET /ledgers`. Core applies default pagination (`limit=10`, `offset=0`) when no query parameters are passed:
+
+```go
+ledgers, resp, err := client.Ledger.List()
+if err != nil {
+    fmt.Printf("Error listing ledgers: %v\n", err)
+    return
+}
+
+fmt.Printf("Ledgers: %+v\n", ledgers)
+fmt.Printf("Status Code: %d\n", resp.StatusCode)
+```
+
+For structured queries, use `Ledger.Filter` instead.
+
 ---
 
 ## 5. Creating Balances
