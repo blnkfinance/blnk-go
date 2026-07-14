@@ -32,6 +32,7 @@ go test -tags=integration -v ./integration/... -run Issue59
 go test -tags=integration -v ./integration/... -run Issue122
 go test -tags=integration -v ./integration/... -run Issue123
 go test -tags=integration -v ./integration/... -run Issue124
+go test -tags=integration -v ./integration/... -run Issue125
 
 # all integration tests
 go test -tags=integration -v ./integration/... 
@@ -84,5 +85,6 @@ go test -tags=integration -v ./integration/...
 | #122 list balances | 0.14.x+ | GET /balances (default limit/offset) |
 | #123 list transactions | 0.14.x+ | GET /transactions (default limit/offset) |
 | #124 list monitors by balance | 0.14.x+ | GET /balance-monitors/balances/{balance_id} |
+| #125 multi-search | 0.14.x+ | POST /multi-search |
 
 If `BLNK_API_KEY` is unset, integration tests skip.
