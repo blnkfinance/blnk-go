@@ -127,6 +127,8 @@ type SearchDocument struct {
 	ScheduledFor       FlexibleTime `json:"scheduled_for,omitempty"`
 	InflightExpiryDate FlexibleTime `json:"inflight_expiry_date,omitempty"`
 	SkipQueue          bool         `json:"skip_queue,omitempty"`
+	// Rate may appear on older Core / indexed search documents.
+	// Core 0.15.0+ typically omits it from new responses (zero when absent).
 	Rate               float64      `json:"rate,omitempty"`
 	PreciseAmount      string       `json:"precise_amount,omitempty"`
 	EffectiveDate      FlexibleTime `json:"effective_date,omitempty"`

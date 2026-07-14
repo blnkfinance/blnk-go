@@ -246,6 +246,8 @@ fmt.Printf("Status Code: %d\n", resp.StatusCode)
 
 For structured queries, use `LedgerBalance.Filter` instead.
 
+> **Core 0.15.0+:** Balance responses no longer include `currency_multiplier`. The field remains on `LedgerBalance` as `float64` for compatibility and is `0` when Core omits it.
+
 To enable fund lineage tracking on create, set `track_fund_lineage` (requires `identity_id`) and optionally `allocation_strategy`:
 
 ```go
@@ -381,6 +383,8 @@ fmt.Printf("Status Code: %d\n", resp.StatusCode)
 ```
 
 For structured queries, use `Transaction.Filter` instead.
+
+> **Core 0.15.0+:** Transaction responses no longer include `rate` (or `modification_ref`). You can still set `Rate: 1.1` on create for multi-currency transfers; omitted response values decode as `0`.
 
 ### Recording Bulk Transactions
 

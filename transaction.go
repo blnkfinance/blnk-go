@@ -25,6 +25,8 @@ type ParentTransaction struct {
 	Currency      string                 `json:"currency"`
 	Sources       []Source               `json:"sources,omitempty"`
 	Destinations  []Source               `json:"destinations,omitempty"`
+	// Rate may be set on create for multi-currency transfers (e.g. Rate: 1.1).
+	// Core 0.15.0+ omits rate from transaction responses (zero when absent).
 	Rate          float64                `json:"rate,omitempty"`
 	Source        string                 `json:"source,omitempty"`
 	Destination   string                 `json:"destination,omitempty"`
