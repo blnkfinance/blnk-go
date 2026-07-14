@@ -365,6 +365,23 @@ if err != nil {
 fmt.Printf("Transaction Recorded: %+v\n", newTransaction)
 ```
 
+### Listing Transactions
+
+Retrieve transactions with `GET /transactions`. Core applies default pagination (`limit=20`, `offset=0`) when no query parameters are passed:
+
+```go
+transactions, resp, err := client.Transaction.List()
+if err != nil {
+    fmt.Printf("Error listing transactions: %v\n", err)
+    return
+}
+
+fmt.Printf("Transactions: %+v\n", transactions)
+fmt.Printf("Status Code: %d\n", resp.StatusCode)
+```
+
+For structured queries, use `Transaction.Filter` instead.
+
 ### Recording Bulk Transactions
 
 Submit multiple transactions in a single request (up to `MaxBulkCreateItems`, 10,000 per request). Set `Atomic` to ensure all transactions succeed or fail together:
