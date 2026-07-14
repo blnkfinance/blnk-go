@@ -20,7 +20,9 @@ type LedgerBalance struct {
 	InflightDebitBalance  *big.Int               `json:"inflight_debit_balance"`
 	QueuedDebitBalance    *big.Int               `json:"queued_debit_balance,omitempty"`
 	QueuedCreditBalance   *big.Int               `json:"queued_credit_balance,omitempty"`
-	CurrencyMultiplier    float64                `json:"currency_multiplier"`
+	// CurrencyMultiplier was removed from Core 0.15.0+ balance responses.
+	// Retained as optional for older Core payloads that still return it.
+	CurrencyMultiplier *float64 `json:"currency_multiplier,omitempty"`
 	Precision             int                    `json:"precision"`
 	LedgerID              string                 `json:"ledger_id"`
 	IdentityID            string                 `json:"identity_id"`

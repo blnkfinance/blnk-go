@@ -127,7 +127,6 @@ type SearchDocument struct {
 	ScheduledFor       FlexibleTime `json:"scheduled_for,omitempty"`
 	InflightExpiryDate FlexibleTime `json:"inflight_expiry_date,omitempty"`
 	SkipQueue          bool         `json:"skip_queue,omitempty"`
-	Rate               float64      `json:"rate,omitempty"`
 	PreciseAmount      string       `json:"precise_amount,omitempty"`
 	EffectiveDate      FlexibleTime `json:"effective_date,omitempty"`
 

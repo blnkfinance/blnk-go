@@ -174,6 +174,7 @@ func main() {
 	fmt.Println(resp.StatusCode)
 
 	//move money from the eur balance to the usd balance and set a rate
+	exchangeRate := 1.1
 	exchangeBody := blnkgo.CreateTransactionRequest{
 		ParentTransaction: blnkgo.ParentTransaction{
 			Amount:      100,
@@ -182,7 +183,7 @@ func main() {
 			Currency:    "EUR",
 			Source:      eurBalance.BalanceID,
 			Destination: usdBalance.BalanceID,
-			Rate:        1.1,
+			Rate:        &exchangeRate,
 			Description: "Exchange",
 		},
 	}

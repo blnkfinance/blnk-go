@@ -565,7 +565,6 @@ func TestSearchDocument_TransactionFields(t *testing.T) {
 	assert.Equal(t, 0.0, doc.OverdraftLimit)
 	assert.Equal(t, "566", doc.PreciseAmount)
 	assert.Equal(t, 1, doc.Precision)
-	assert.Equal(t, 1.0, doc.Rate)
 	assert.Equal(t, "motor-test-34c9737f-1bc8-4495-a33d-0d8207be46c3_q", doc.Reference)
 	assert.Equal(t, false, doc.SkipQueue)
 	assert.Equal(t, "26", doc.ID)
