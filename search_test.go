@@ -112,6 +112,121 @@ func TestSearchService_SearchDocument_IdentitiesResource(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
+func TestSearchService_MultiSearch_Success(t *testing.T) {
+	mockClient, svc := setupSearchService()
+
+	body := blnkgo.MultiSearchRequest{
+		Searches: []blnkgo.MultiSearchCollectionParams{
+			{Collection: "ledgers", Q: "General", QueryBy: "name", PerPage: 1},
+			{Collection: "balances", Q: "*", QueryBy: "currency", PerPage: 1},
+		},
+	}
+
+	expectedResponse := &blnkgo.MultiSearchResponse{
+		Results: []blnkgo.SearchResponse{
+			{Found: 1, OutOf: 10, Page: 1, SearchTimeMs: 2},
+			{Found: 5, OutOf: 20, Page: 1, SearchTimeMs: 3},
+		},
+	}
+
+	mockClient.On("NewRequest", "multi-search", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusOK,
+	}, nil).Run(func(args mock.Arguments) {
+		result := args.Get(1).(*blnkgo.MultiSearchResponse)
+		*result = *expectedResponse
+	})
+
+	result, resp, err := svc.MultiSearch(body)
+
+	assert.NoError(t, err)
+	assert.Equal(t, expectedResponse, result)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	mockClient.AssertExpectations(t)
+}
+
+func TestSearchService_MultiSearch_EmptySearches(t *testing.T) {
+	_, svc := setupSearchService()
+
+	_, resp, err := svc.MultiSearch(blnkgo.MultiSearchRequest{})
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	assert.Contains(t, err.Error(), "searches cannot be empty")
+}
+
+func TestSearchService_MultiSearch_MissingCollection(t *testing.T) {
+	_, svc := setupSearchService()
+
+	_, resp, err := svc.MultiSearch(blnkgo.MultiSearchRequest{
+		Searches: []blnkgo.MultiSearchCollectionParams{
+			{Q: "*"},
+		},
+	})
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	assert.Contains(t, err.Error(), "collection is required")
+}
+
+func TestSearchService_MultiSearch_MissingQ(t *testing.T) {
+	_, svc := setupSearchService()
+
+	_, resp, err := svc.MultiSearch(blnkgo.MultiSearchRequest{
+		Searches: []blnkgo.MultiSearchCollectionParams{
+			{Collection: "ledgers"},
+		},
+	})
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	assert.Contains(t, err.Error(), "q is required")
+}
+
+func TestSearchService_MultiSearch_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupSearchService()
+
+	body := blnkgo.MultiSearchRequest{
+		Searches: []blnkgo.MultiSearchCollectionParams{
+			{Collection: "ledgers", Q: "*"},
+		},
+	}
+
+	mockClient.On("NewRequest", "multi-search", http.MethodPost, body).Return(nil, fmt.Errorf("failed to create request"))
+
+	result, resp, err := svc.MultiSearch(body)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Nil(t, resp)
+	assert.Contains(t, err.Error(), "failed to create request")
+	mockClient.AssertExpectations(t)
+}
+
+func TestSearchService_MultiSearch_ServerError(t *testing.T) {
+	mockClient, svc := setupSearchService()
+
+	body := blnkgo.MultiSearchRequest{
+		Searches: []blnkgo.MultiSearchCollectionParams{
+			{Collection: "ledgers", Q: "*"},
+		},
+	}
+
+	mockClient.On("NewRequest", "multi-search", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusBadRequest,
+	}, fmt.Errorf("search error"))
+
+	result, resp, err := svc.MultiSearch(body)
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.NotNil(t, resp)
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	mockClient.AssertExpectations(t)
+}
+
 func TestSearchService_SearchDocument_EmptyRequest(t *testing.T) {
 	mockClient, svc := setupSearchService()
 	body := blnkgo.SearchParams{}

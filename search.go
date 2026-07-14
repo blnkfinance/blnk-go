@@ -135,6 +135,27 @@ type SearchDocument struct {
 	Name string `json:"name,omitempty"`
 }
 
+// MultiSearchCollectionParams is one search in a POST /multi-search request.
+type MultiSearchCollectionParams struct {
+	Collection string `json:"collection"`
+	Q          string `json:"q"`
+	QueryBy    string `json:"query_by,omitempty"`
+	FilterBy   string `json:"filter_by,omitempty"`
+	SortBy     string `json:"sort_by,omitempty"`
+	Page       int    `json:"page,omitempty"`
+	PerPage    int    `json:"per_page,omitempty"`
+}
+
+// MultiSearchRequest is the body for POST /multi-search.
+type MultiSearchRequest struct {
+	Searches []MultiSearchCollectionParams `json:"searches"`
+}
+
+// MultiSearchResponse is returned by POST /multi-search.
+type MultiSearchResponse struct {
+	Results []SearchResponse `json:"results"`
+}
+
 // StartReindexRequest is the optional body for POST /search/reindex.
 type StartReindexRequest struct {
 	BatchSize *int `json:"batch_size,omitempty"`
@@ -171,6 +192,34 @@ func (s *SearchService) SearchDocument(body SearchParams, resource ResourceType)
 	}
 
 	return searchResponse, resp, nil
+}
+
+// MultiSearch runs searches across one or more Typesense collections via POST /multi-search.
+func (s *SearchService) MultiSearch(body MultiSearchRequest) (*MultiSearchResponse, *http.Response, error) {
+	if len(body.Searches) == 0 {
+		return nil, nil, fmt.Errorf("searches cannot be empty")
+	}
+	for i, search := range body.Searches {
+		if search.Collection == "" {
+			return nil, nil, fmt.Errorf("searches[%d].collection is required", i)
+		}
+		if search.Q == "" {
+			return nil, nil, fmt.Errorf("searches[%d].q is required", i)
+		}
+	}
+
+	req, err := s.client.NewRequest("multi-search", http.MethodPost, body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	multiResp := new(MultiSearchResponse)
+	resp, err := s.client.CallWithRetry(req, multiResp)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return multiResp, resp, nil
 }
 
 // StartReindex triggers a full Typesense reindex from the database.

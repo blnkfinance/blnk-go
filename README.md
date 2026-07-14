@@ -1084,6 +1084,23 @@ balances, resp, err := client.Search.SearchBalances(searchParams)
 ledgers, resp, err := client.Search.SearchLedgers(searchParams)
 ```
 
+Search across multiple collections in one request:
+
+```go
+multi, resp, err := client.Search.MultiSearch(blnkgo.MultiSearchRequest{
+    Searches: []blnkgo.MultiSearchCollectionParams{
+        {Collection: "ledgers", Q: "General", QueryBy: "name", PerPage: 5},
+        {Collection: "balances", Q: "*", QueryBy: "currency", PerPage: 5},
+    },
+})
+if err != nil {
+    log.Fatal(err)
+}
+for i, result := range multi.Results {
+    fmt.Printf("search[%d] found=%d\n", i, result.Found)
+}
+```
+
 Start a Typesense reindex and poll progress:
 
 ```go
