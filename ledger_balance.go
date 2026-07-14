@@ -68,6 +68,23 @@ func (s *LedgerBalanceService) Create(body CreateLedgerBalanceRequest) (*LedgerB
 	return ledgerBalance, resp, nil
 }
 
+// List returns balances via GET /balances.
+// Core applies default pagination (limit=10, offset=0) when query params are omitted.
+func (s *LedgerBalanceService) List() ([]LedgerBalance, *http.Response, error) {
+	req, err := s.client.NewRequest("balances", http.MethodGet, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var balances []LedgerBalance
+	resp, err := s.client.CallWithRetry(req, &balances)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return balances, resp, nil
+}
+
 func (s *LedgerBalanceService) Get(balanceID string, opts ...*GetBalanceRequest) (*LedgerBalance, *http.Response, error) {
 	if balanceID == "" {
 		return nil, nil, fmt.Errorf("invalid: id is required")
