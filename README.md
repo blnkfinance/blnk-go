@@ -229,6 +229,23 @@ if err != nil {
 fmt.Printf("Balance Created: %+v\n", newBalance)
 ```
 
+### Listing Balances
+
+Retrieve balances with `GET /balances`. Core applies default pagination (`limit=10`, `offset=0`) when no query parameters are passed:
+
+```go
+balances, resp, err := client.LedgerBalance.List()
+if err != nil {
+    fmt.Printf("Error listing balances: %v\n", err)
+    return
+}
+
+fmt.Printf("Balances: %+v\n", balances)
+fmt.Printf("Status Code: %d\n", resp.StatusCode)
+```
+
+For structured queries, use `LedgerBalance.Filter` instead.
+
 To enable fund lineage tracking on create, set `track_fund_lineage` (requires `identity_id`) and optionally `allocation_strategy`:
 
 ```go

@@ -29,6 +29,7 @@ go test -tags=integration -v ./integration/... -run Issue36
 go test -tags=integration -v ./integration/... -run Issue61
 go test -tags=integration -v ./integration/... -run Issue58
 go test -tags=integration -v ./integration/... -run Issue59
+go test -tags=integration -v ./integration/... -run Issue122
 
 # all integration tests
 go test -tags=integration -v ./integration/... 
@@ -78,5 +79,6 @@ go test -tags=integration -v ./integration/...
 | #117 delete identity | 0.15.0+ | DELETE /identities/{id} |
 | #118 delete balance monitor | 0.15.0+ | DELETE /balance-monitors/{id} |
 | #119 reconciliation run response | 0.15.0+ | POST /reconciliation/start returns reconciliation_id only |
+| #122 list balances | 0.14.x+ | GET /balances (default limit/offset) |
 
 If `BLNK_API_KEY` is unset, integration tests skip.
