@@ -224,6 +224,77 @@ func TestBalanceMonitorService_List_ServerError(t *testing.T) {
 	assert.Contains(t, err.Error(), "server error")
 	mockClient.AssertExpectations(t)
 }
+
+func TestBalanceMonitorService_ListByBalanceID_Success(t *testing.T) {
+	mockClient, svc := setupBalanceMonitorService()
+
+	balanceID := "balance-123"
+	expectedResp := []blnkgo.MonitorDataResp{
+		{
+			MonitorID:   "monitor-123",
+			CreatedAt:   time.Now().Format(time.RFC3339),
+			MonitorData: blnkgo.MonitorData{BalanceID: balanceID},
+		},
+	}
+
+	mockClient.On("NewRequest", "balance-monitors/balances/"+balanceID, http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusOK}, nil).Run(func(args mock.Arguments) {
+		resp := args.Get(1).(*[]blnkgo.MonitorDataResp)
+		*resp = expectedResp
+	})
+
+	resp, httpResp, err := svc.ListByBalanceID(balanceID)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusOK, httpResp.StatusCode)
+	assert.Equal(t, expectedResp, resp)
+	mockClient.AssertExpectations(t)
+}
+
+func TestBalanceMonitorService_ListByBalanceID_EmptyBalanceID(t *testing.T) {
+	_, svc := setupBalanceMonitorService()
+
+	resp, httpResp, err := svc.ListByBalanceID("")
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	assert.Nil(t, httpResp)
+	assert.Contains(t, err.Error(), "balance id is required")
+}
+
+func TestBalanceMonitorService_ListByBalanceID_RequestCreationFailure(t *testing.T) {
+	mockClient, svc := setupBalanceMonitorService()
+
+	balanceID := "balance-123"
+	mockClient.On("NewRequest", "balance-monitors/balances/"+balanceID, http.MethodGet, nil).Return(nil, errors.New("failed to create request"))
+
+	resp, httpResp, err := svc.ListByBalanceID(balanceID)
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	assert.Nil(t, httpResp)
+	assert.Contains(t, err.Error(), "failed to create request")
+	mockClient.AssertExpectations(t)
+}
+
+func TestBalanceMonitorService_ListByBalanceID_ServerError(t *testing.T) {
+	mockClient, svc := setupBalanceMonitorService()
+
+	balanceID := "balance-123"
+	mockClient.On("NewRequest", "balance-monitors/balances/"+balanceID, http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{StatusCode: http.StatusInternalServerError}, errors.New("server error"))
+
+	resp, httpResp, err := svc.ListByBalanceID(balanceID)
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	assert.NotNil(t, httpResp)
+	assert.Equal(t, http.StatusInternalServerError, httpResp.StatusCode)
+	assert.Contains(t, err.Error(), "server error")
+	mockClient.AssertExpectations(t)
+}
+
 func TestBalanceMonitorService_Update_Success(t *testing.T) {
 	mockClient, svc := setupBalanceMonitorService()
 
