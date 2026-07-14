@@ -12,3 +12,9 @@ func TestValidateMonitorID(t *testing.T) {
 	require.Error(t, blnkgo.ValidateMonitorID(""))
 	require.Error(t, blnkgo.ValidateMonitorID("   "))
 }
+
+func TestValidateBalanceID(t *testing.T) {
+	require.NoError(t, blnkgo.ValidateBalanceID("bln_test_123"))
+	require.Error(t, blnkgo.ValidateBalanceID(""))
+	require.Error(t, blnkgo.ValidateBalanceID("   "))
+}

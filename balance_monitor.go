@@ -79,6 +79,28 @@ func (s *BalanceMonitorService) List() ([]MonitorDataResp, *http.Response, error
 	return monitorData, resp, nil
 }
 
+// ListByBalanceID returns monitors for a specific balance via
+// GET /balance-monitors/balances/{balance_id}.
+func (s *BalanceMonitorService) ListByBalanceID(balanceID string) ([]MonitorDataResp, *http.Response, error) {
+	if err := ValidateBalanceID(balanceID); err != nil {
+		return nil, nil, err
+	}
+
+	u := fmt.Sprintf("balance-monitors/balances/%s", balanceID)
+	req, err := s.client.NewRequest(u, http.MethodGet, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var monitorData []MonitorDataResp
+	resp, err := s.client.CallWithRetry(req, &monitorData)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return monitorData, resp, nil
+}
+
 func (s *BalanceMonitorService) Update(monitorID string, data MonitorData) (*MonitorDataResp, *http.Response, error) {
 	req, err := s.client.NewRequest("balance-monitors/"+monitorID, http.MethodPut, data)
 	if err != nil {

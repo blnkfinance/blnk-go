@@ -647,6 +647,19 @@ if err != nil {
 fmt.Printf("Monitor Created: %+v\n", monitor)
 ```
 
+List monitors for a specific balance:
+
+```go
+monitors, resp, err := client.BalanceMonitor.ListByBalanceID(newBalance.BalanceID)
+if err != nil {
+    fmt.Printf("Error listing monitors: %v\n", err)
+    return
+}
+
+fmt.Printf("Monitors: %+v\n", monitors)
+fmt.Printf("Status Code: %d\n", resp.StatusCode)
+```
+
 Delete a balance monitor (Core 0.15.0+):
 
 ```go

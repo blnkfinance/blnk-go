@@ -12,3 +12,11 @@ func ValidateMonitorID(monitorID string) error {
 	}
 	return nil
 }
+
+// ValidateBalanceID performs client-side checks before operations that require a balance ID.
+func ValidateBalanceID(balanceID string) error {
+	if strings.TrimSpace(balanceID) == "" {
+		return fmt.Errorf("balance id is required")
+	}
+	return nil
+}
