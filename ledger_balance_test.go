@@ -223,6 +223,42 @@ func TestLedgerBalanceService_Get_WithFromSource(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
+func TestLedgerBalanceService_Get_WithQueued(t *testing.T) {
+	mockClient, svc := setupLedgerBalanceService()
+	balanceID := "balance123"
+	expectedEndpoint := fmt.Sprintf("balances/%s?with_queued=true", balanceID)
+
+	mockClient.On("NewRequest", expectedEndpoint, http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusOK,
+	}, nil)
+
+	_, resp, err := svc.Get(balanceID, &blnkgo.GetBalanceRequest{WithQueued: true})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	mockClient.AssertCalled(t, "NewRequest", expectedEndpoint, http.MethodGet, nil)
+	mockClient.AssertExpectations(t)
+}
+
+func TestLedgerBalanceService_Get_WithFromSourceAndWithQueued(t *testing.T) {
+	mockClient, svc := setupLedgerBalanceService()
+	balanceID := "balance123"
+	expectedEndpoint := fmt.Sprintf("balances/%s?from_source=true&with_queued=true", balanceID)
+
+	mockClient.On("NewRequest", expectedEndpoint, http.MethodGet, nil).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusOK,
+	}, nil)
+
+	_, resp, err := svc.Get(balanceID, &blnkgo.GetBalanceRequest{FromSource: true, WithQueued: true})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	mockClient.AssertCalled(t, "NewRequest", expectedEndpoint, http.MethodGet, nil)
+	mockClient.AssertExpectations(t)
+}
+
 func TestLedgerBalanceService_Get_BackwardCompatibleNoOptions(t *testing.T) {
 	mockClient, svc := setupLedgerBalanceService()
 	balanceID := "balance123"

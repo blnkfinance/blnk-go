@@ -15,6 +15,7 @@ export BLNK_API_KEY=your_master_or_api_key
 go test -tags=integration -v ./integration/... -run Issue70
 go test -tags=integration -v ./integration/... -run Issue86
 go test -tags=integration -v ./integration/... -run Issue69
+go test -tags=integration -v ./integration/... -run Issue127
 go test -tags=integration -v ./integration/... -run Issue68
 go test -tags=integration -v ./integration/... -run Issue71
 go test -tags=integration -v ./integration/... -run Issue40
@@ -55,6 +56,7 @@ go test -tags=integration -v ./integration/...
 | #71 precise_distribution | 0.14.x+ | Split legs with precise_distribution on POST /transactions |
 | #86 update skip_queue | 0.14.x+ | skip_queue on inflight commit/void (Update + bulk) |
 | #69 balance from_source | 0.14.x+ | GET /balances/{id}?from_source=true |
+| #127 balance with_queued | 0.14.x+ | GET /balances/{id}?with_queued=true |
 | #68 balance lineage create | 0.14.x+ | track_fund_lineage + allocation_strategy on POST /balances |
 | #73 search identities | 0.14.x+ | Not 0.15-only |
 | #72 identity optional id | 0.14.x+ | Caller-supplied identity_id on POST /identities |
