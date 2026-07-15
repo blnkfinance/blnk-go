@@ -279,20 +279,24 @@ balanceBody := blnkgo.CreateLedgerBalanceRequest{
 lineageBalance, resp, err := client.LedgerBalance.Create(balanceBody)
 ```
 
-### Retrieving a Balance (from source)
+### Retrieving a Balance
 
-By default, `Get` returns the stored balance snapshot. Pass `from_source: true` to reconstruct the balance from all transactions instead:
+By default, `Get` returns the stored balance snapshot. Optional query parameters:
+
+- `from_source: true` — reconstruct the balance from all transactions instead of snapshots
+- `with_queued: true` — include queued debit/credit balances in the response
 
 ```go
 balance, resp, err := client.LedgerBalance.Get(newBalance.BalanceID, &blnkgo.GetBalanceRequest{
     FromSource: true,
+    WithQueued: true,
 })
 if err != nil {
-    fmt.Printf("Error fetching balance from source: %v\n", err)
+    fmt.Printf("Error fetching balance: %v\n", err)
     return
 }
 
-fmt.Printf("Balance from source: %+v\n", balance)
+fmt.Printf("Balance: %+v\n", balance)
 ```
 
 Existing callers can keep using `client.LedgerBalance.Get(balanceID)` with no second argument.
