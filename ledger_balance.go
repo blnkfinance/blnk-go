@@ -11,37 +11,44 @@ import (
 type LedgerBalanceService service
 
 type LedgerBalance struct {
-	BalanceID             string                 `json:"balance_id"`
-	Balance               *big.Int               `json:"balance"`
-	Version               int64                  `json:"version"`
-	InflightBalance       *big.Int               `json:"inflight_balance"`
-	CreditBalance         *big.Int               `json:"credit_balance"`
-	InflightCreditBalance *big.Int               `json:"inflight_credit_balance"`
-	DebitBalance          *big.Int               `json:"debit_balance"`
-	InflightDebitBalance  *big.Int               `json:"inflight_debit_balance"`
-	QueuedDebitBalance    *big.Int               `json:"queued_debit_balance,omitempty"`
-	QueuedCreditBalance   *big.Int               `json:"queued_credit_balance,omitempty"`
+	BalanceID             string   `json:"balance_id"`
+	Balance               *big.Int `json:"balance"`
+	Version               int64    `json:"version"`
+	InflightBalance       *big.Int `json:"inflight_balance"`
+	CreditBalance         *big.Int `json:"credit_balance"`
+	InflightCreditBalance *big.Int `json:"inflight_credit_balance"`
+	DebitBalance          *big.Int `json:"debit_balance"`
+	InflightDebitBalance  *big.Int `json:"inflight_debit_balance"`
+	QueuedDebitBalance    *big.Int `json:"queued_debit_balance,omitempty"`
+	QueuedCreditBalance   *big.Int `json:"queued_credit_balance,omitempty"`
 	// CurrencyMultiplier is omitted from Core 0.15.0+ balance responses (zero when absent).
 	// Kept as float64 for source compatibility with existing callers.
-	CurrencyMultiplier float64 `json:"currency_multiplier,omitempty"`
-	Precision             int                    `json:"precision"`
-	LedgerID              string                 `json:"ledger_id"`
-	IdentityID            string                 `json:"identity_id"`
-	Indicator             string                 `json:"indicator"`
-	Currency              string                 `json:"currency"`
-	CreatedAt             time.Time              `json:"created_at"`
-	InflightExpiresAt     time.Time              `json:"inflight_expires_at"`
-	MetaData              MetaData           `json:"meta_data,omitempty"`
-	TrackFundLineage      bool                   `json:"track_fund_lineage,omitempty"`
-	AllocationStrategy    AllocationStrategy     `json:"allocation_strategy,omitempty"`
+	CurrencyMultiplier float64            `json:"currency_multiplier,omitempty"`
+	Precision          int                `json:"precision"`
+	LedgerID           string             `json:"ledger_id"`
+	IdentityID         string             `json:"identity_id"`
+	Indicator          string             `json:"indicator"`
+	Currency           string             `json:"currency"`
+	CreatedAt          time.Time          `json:"created_at"`
+	InflightExpiresAt  time.Time          `json:"inflight_expires_at"`
+	MetaData           MetaData           `json:"meta_data,omitempty"`
+	TrackFundLineage   bool               `json:"track_fund_lineage,omitempty"`
+	AllocationStrategy AllocationStrategy `json:"allocation_strategy,omitempty"`
 }
 
+// GeneralLedgerID is the ledger_id required when creating an internal
+// (General Ledger) balance with an @ indicator (Core 0.15.3+).
+const GeneralLedgerID = "general_ledger_id"
+
 type CreateLedgerBalanceRequest struct {
-	LedgerID           string                 `json:"ledger_id"`
-	IdentityID         string                 `json:"identity_id,omitempty"`
-	Currency           string                 `json:"currency"`
-	TrackFundLineage   bool                   `json:"track_fund_lineage,omitempty"`
-	AllocationStrategy AllocationStrategy     `json:"allocation_strategy,omitempty"`
+	LedgerID   string `json:"ledger_id"`
+	IdentityID string `json:"identity_id,omitempty"`
+	// Indicator creates a General Ledger balance (must start with @, no spaces).
+	// Only valid when LedgerID is GeneralLedgerID.
+	Indicator          string             `json:"indicator,omitempty"`
+	Currency           string             `json:"currency"`
+	TrackFundLineage   bool               `json:"track_fund_lineage,omitempty"`
+	AllocationStrategy AllocationStrategy `json:"allocation_strategy,omitempty"`
 	MetaData           MetaData           `json:"meta_data,omitempty"`
 }
 

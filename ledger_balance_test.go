@@ -53,6 +53,34 @@ func TestLedgerBalanceService_Create_Success(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
+func TestLedgerBalanceService_Create_WithIndicator(t *testing.T) {
+	mockClient, svc := setupLedgerBalanceService()
+
+	body := blnkgo.CreateLedgerBalanceRequest{
+		LedgerID:  blnkgo.GeneralLedgerID,
+		Currency:  "USD",
+		Indicator: "@WorldUSD",
+	}
+
+	mockClient.On("NewRequest", "balances", http.MethodPost, body).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusCreated,
+	}, nil).Run(func(args mock.Arguments) {
+		ledgerBalance := args.Get(1).(*blnkgo.LedgerBalance)
+		ledgerBalance.BalanceID = "balance123"
+		ledgerBalance.LedgerID = blnkgo.GeneralLedgerID
+		ledgerBalance.Indicator = "@WorldUSD"
+	})
+
+	ledgerBalance, resp, err := svc.Create(body)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, "@WorldUSD", ledgerBalance.Indicator)
+	assert.Equal(t, blnkgo.GeneralLedgerID, ledgerBalance.LedgerID)
+	mockClient.AssertExpectations(t)
+}
+
 func TestLedgerBalanceService_Create_WithLineageFields(t *testing.T) {
 	mockClient, svc := setupLedgerBalanceService()
 

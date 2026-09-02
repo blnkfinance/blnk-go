@@ -117,8 +117,8 @@ func ValidateRecoverQueue(r RecoverQueueRequest) error {
 }
 
 func ValidateRefundTransaction(r RefundTransactionRequest) error {
-	// RefundTransactionRequest only exposes skip_queue; no extra field validation needed
-	// beyond JSON types. Kept for parity with other transaction validators.
+	// Description, MetaData, SkipQueue, and DryRun are all optional. Core copies
+	// the original description when Description is empty and ignores empty MetaData.
 	return nil
 }
 

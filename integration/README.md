@@ -35,6 +35,7 @@ go test -tags=integration -v ./integration/... -run Issue123
 go test -tags=integration -v ./integration/... -run Issue124
 go test -tags=integration -v ./integration/... -run Issue125
 go test -tags=integration -v ./integration/... -run Issue126
+go test -tags=integration -v ./integration/... -run Issue141
 
 # all integration tests
 go test -tags=integration -v ./integration/... 
@@ -90,5 +91,6 @@ go test -tags=integration -v ./integration/...
 | #124 list monitors by balance | 0.14.x+ | GET /balance-monitors/balances/{balance_id} |
 | #125 multi-search | 0.14.x+ | POST /multi-search |
 | #126 dropped Core 0.15 fields | 0.15.0+ | rate / currency_multiplier response alignment |
+| #141 Core 0.15.3 patch | 0.15.3+ | dry-run, GL indicator, refund extras, hooks list, error codes |
 
 If `BLNK_API_KEY` is unset, integration tests skip.

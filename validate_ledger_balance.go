@@ -30,6 +30,17 @@ func ValidateCreateLedgerBalance(b CreateLedgerBalanceRequest) error {
 	if b.AllocationStrategy != "" && !isValidAllocationStrategy(b.AllocationStrategy) {
 		return fmt.Errorf("allocation_strategy must be one of FIFO, LIFO, or PROPORTIONAL")
 	}
+	if b.Indicator != "" {
+		if !strings.HasPrefix(b.Indicator, "@") {
+			return fmt.Errorf("indicator must start with @")
+		}
+		if strings.ContainsAny(b.Indicator, " \t\n\r") {
+			return fmt.Errorf("indicator must not contain spaces")
+		}
+		if b.LedgerID != GeneralLedgerID {
+			return fmt.Errorf("indicator is only valid when ledger_id is %s", GeneralLedgerID)
+		}
+	}
 	return nil
 }
 

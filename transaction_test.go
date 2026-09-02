@@ -515,6 +515,46 @@ func TestRefundTransaction_WithSkipQueue(t *testing.T) {
 	mockClient.AssertExpectations(t)
 }
 
+func TestRefundTransaction_WithDescriptionAndMetaData(t *testing.T) {
+	mockClient, svc := setupTransactionService()
+	refundBody := &blnkgo.RefundTransactionRequest{
+		SkipQueue:   true,
+		Description: "customer refund",
+		MetaData:    blnkgo.MetaData{"reason": "duplicate"},
+	}
+
+	mockClient.On(
+		"NewRequest",
+		"refund-transaction/txn-456",
+		http.MethodPost,
+		mock.MatchedBy(func(body interface{}) bool {
+			req, ok := body.(*blnkgo.RefundTransactionRequest)
+			return ok && req.SkipQueue && req.Description == "customer refund" && req.MetaData["reason"] == "duplicate"
+		}),
+	).Return(&http.Request{}, nil)
+	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusCreated,
+	}, nil).Run(func(args mock.Arguments) {
+		transaction := args.Get(1).(*blnkgo.Transaction)
+		*transaction = blnkgo.Transaction{
+			ParentTransaction: blnkgo.ParentTransaction{
+				Description: "customer refund",
+				MetaData:    blnkgo.MetaData{"reason": "duplicate"},
+				Status:      blnkgo.PryTransactionStatus("APPLIED"),
+			},
+			TransactionID: "txn-refund-meta",
+		}
+	})
+
+	result, resp, err := svc.Refund("txn-456", refundBody)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+	assert.Equal(t, "customer refund", result.Description)
+	assert.Equal(t, "duplicate", result.MetaData["reason"])
+	mockClient.AssertExpectations(t)
+}
+
 func TestUpdateStatus_WithSkipQueue(t *testing.T) {
 	mockClient, svc := setupTransactionService()
 	body := blnkgo.UpdateStatus{
