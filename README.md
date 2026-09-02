@@ -20,6 +20,7 @@ The official Go SDK for Blnk - A powerful ledger system for financial applicatio
 - [6. Recording Transactions](#6-recording-transactions)
 - [7. Advanced Features](#7-advanced-features)
   - [Inflight Transactions](#inflight-transactions)
+  - [Dry-run transactions](#dry-run-transactions)
   - [Multi-Source/Destination Transactions](#multi-sourcedestination-transactions)
   - [Balance Monitors](#balance-monitors)
   - [Identity Management](#identity-management)
@@ -53,8 +54,10 @@ git clone https://github.com/blnkfinance/blnk && cd blnk
 Install the Blnk Go SDK in your project:
 
 ```bash
-go get github.com/blnkfinance/blnk-go
+go get github.com/blnkfinance/blnk-go@v1.4.0
 ```
+
+`v1.4.0` targets **Blnk Core 0.15.3**. See [RELEASE.md](RELEASE.md) for dry-run, General Ledger `indicator`, refund `description`/`meta_data`, and named error codes.
 
 ### Step 3: Setting Up Configuration
 
@@ -279,6 +282,18 @@ balanceBody := blnkgo.CreateLedgerBalanceRequest{
 lineageBalance, resp, err := client.LedgerBalance.Create(balanceBody)
 ```
 
+Create a General Ledger (internal) balance on Core **0.15.3+** with `ledger_id: "general_ledger_id"` and an `@` indicator:
+
+```go
+glBalance, resp, err := client.LedgerBalance.Create(blnkgo.CreateLedgerBalanceRequest{
+    LedgerID:  blnkgo.GeneralLedgerID,
+    Currency:  "USD",
+    Indicator: "@Revenue",
+})
+```
+
+Duplicate `indicator` + `currency` returns HTTP 409 with `GEN_CONFLICT`. `indicator` is only valid when `ledger_id` is `general_ledger_id`.
+
 ### Retrieving a Balance
 
 By default, `Get` returns the stored balance snapshot. Optional query parameters:
@@ -388,6 +403,31 @@ if err != nil {
 fmt.Printf("Transaction Recorded: %+v\n", newTransaction)
 ```
 
+### Dry-run transactions
+
+On Core **0.15.3+**, use the `*DryRun` methods to preview balances without writing a transaction, queue entry, webhook, or `@` balance. The `reference` is not consumed. Core always returns HTTP 200; a projected rejection is `WouldApply == false`, not an HTTP error.
+
+```go
+preview, resp, err := client.Transaction.CreateDryRun(blnkgo.CreateTransactionRequest{
+    ParentTransaction: blnkgo.ParentTransaction{
+        Amount:      750,
+        Reference:   "ref_preview_001",
+        Currency:    "USD",
+        Precision:   100,
+        Source:      "@WorldUSD",
+        Destination: "@MyBalance",
+        Description: "Preview transfer",
+    },
+    AllowOverdraft: true,
+})
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(preview.WouldApply, preview.Balances)
+```
+
+The same preview type is returned by `CreateBulkDryRun`, `RefundDryRun`, `UpdateDryRun`, `BulkCommitInflightDryRun`, and `BulkVoidInflightDryRun`. Do not set `DryRun: true` on the posted methods — those return an error so a preview cannot be mistaken for a recorded transaction.
+
 ### Listing Transactions
 
 Retrieve transactions with `GET /transactions`. Core applies default pagination (`limit=20`, `offset=0`) when no query parameters are passed:
@@ -474,9 +514,11 @@ Refund by transaction ID. Omit the body to queue the refund (Core default), or p
 // Queued refund (default) — existing callers keep working without a second argument
 refund, resp, err := client.Transaction.Refund(originalTxnID)
 
-// Synchronous refund
+// Synchronous refund with optional narration and metadata (Core 0.15.3+)
 refund, resp, err := client.Transaction.Refund(originalTxnID, &blnkgo.RefundTransactionRequest{
-    SkipQueue: true,
+    SkipQueue:   true,
+    Description: "customer refund",
+    MetaData:    blnkgo.MetaData{"reason": "duplicate"},
 })
 ```
 
@@ -1064,9 +1106,11 @@ if err != nil {
 fmt.Println("Hook:", hook.Name, hook.Active)
 ```
 
-List hooks, optionally filtered by type:
+List hooks, optionally filtered by type. Omit the filter (`List(nil)`) to return PRE and POST hooks:
 
 ```go
+allHooks, resp, err := client.Hooks.List(nil)
+
 hooks, resp, err := client.Hooks.List(&blnkgo.ListHooksOptions{
     Type: blnkgo.HookTypePreTransaction,
 })
@@ -1154,10 +1198,12 @@ if err != nil {
     var apiErr *blnkgo.ApiErrorResponse
     if errors.As(err, &apiErr) && apiErr.ErrorDetail != nil {
         switch apiErr.ErrorDetail.Code {
-        case "TXN_NOT_FOUND":
-            // handle missing transaction
-        case "GEN_CONFLICT":
-            // handle conflict
+        case blnkgo.ErrorCodeTxnValidationError:
+            // negative amount/precision or source equal to destination
+        case blnkgo.ErrorCodeTxnInvalidAmount:
+            // catalog code for invalid amounts
+        case blnkgo.ErrorCodeGenConflict:
+            // duplicate internal-balance indicator + currency
         default:
             fmt.Printf("API error %s: %s\n", apiErr.ErrorDetail.Code, apiErr.ErrorDetail.Message)
         }

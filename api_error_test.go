@@ -1,6 +1,7 @@
 package blnkgo_test
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -127,4 +128,26 @@ func TestApiErrorResponse_ErrorStringUsesCode(t *testing.T) {
 	}
 	assert.Contains(t, apiErr.Error(), "GEN_CONFLICT")
 	assert.Contains(t, apiErr.Error(), "conflict")
+}
+
+func TestParseApiErrorBody_Core0153Codes(t *testing.T) {
+	cases := []struct {
+		code string
+	}{
+		{blnkgo.ErrorCodeTxnInvalidAmount},
+		{blnkgo.ErrorCodeTxnValidationError},
+		{blnkgo.ErrorCodeGenConflict},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.code, func(t *testing.T) {
+			body := []byte(fmt.Sprintf(`{
+				"error": "rejected",
+				"error_detail": {"code": %q, "message": "rejected"}
+			}`, tc.code))
+			_, detail := blnkgo.ParseApiErrorBody(body)
+			require.NotNil(t, detail)
+			assert.Equal(t, tc.code, detail.Code)
+		})
+	}
 }

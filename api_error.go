@@ -8,6 +8,22 @@ import (
 	"net/http"
 )
 
+// Stable Core error_detail.code values called out for SDK 1.4.0 / Core 0.15.3.
+// Compare ErrorDetail.Code — do not branch on message text.
+//
+// https://docs.blnkfinance.com/advanced/error-codes
+const (
+	// ErrorCodeTxnInvalidAmount is the catalog code for invalid amounts.
+	ErrorCodeTxnInvalidAmount = "TXN_INVALID_AMOUNT"
+	// ErrorCodeGenConflict is returned for a duplicate internal-balance
+	// indicator + currency (HTTP 409).
+	ErrorCodeGenConflict = "GEN_CONFLICT"
+	// ErrorCodeTxnValidationError is returned when Core rejects a request
+	// before processing. On 0.15.3 this includes negative amount/precision
+	// and source equal to destination.
+	ErrorCodeTxnValidationError = "TXN_VALIDATION_ERROR"
+)
+
 // ApiErrorDetail is the structured error payload returned by Core 0.15.0+.
 type ApiErrorDetail struct {
 	Code    string      `json:"code"`
