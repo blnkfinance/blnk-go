@@ -151,3 +151,35 @@ func TestParseApiErrorBody_Core0153Codes(t *testing.T) {
 		})
 	}
 }
+
+func TestParseApiErrorBody_TxnAlreadyRefunded(t *testing.T) {
+	body := []byte(`{
+		"error": "transaction txn_1 has already been refunded",
+		"error_detail": {
+			"code": "TXN_ALREADY_REFUNDED",
+			"message": "transaction txn_1 has already been refunded",
+			"details": {"transaction_id": "txn_1"}
+		}
+	}`)
+
+	_, detail := blnkgo.ParseApiErrorBody(body)
+	require.NotNil(t, detail)
+	assert.Equal(t, blnkgo.ErrorCodeTxnAlreadyRefunded, detail.Code)
+	assert.Equal(t, "transaction txn_1 has already been refunded", detail.Message)
+	assert.NotNil(t, detail.Details)
+}
+
+func TestParseApiErrorBody_BalNotFound(t *testing.T) {
+	body := []byte(`{
+		"error": "balance bln_missing not found",
+		"error_detail": {
+			"code": "BAL_NOT_FOUND",
+			"message": "balance bln_missing not found"
+		}
+	}`)
+
+	_, detail := blnkgo.ParseApiErrorBody(body)
+	require.NotNil(t, detail)
+	assert.Equal(t, blnkgo.ErrorCodeBalNotFound, detail.Code)
+	assert.Equal(t, "balance bln_missing not found", detail.Message)
+}
