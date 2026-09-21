@@ -1190,20 +1190,24 @@ fmt.Println(progress.Status, progress.Phase, progress.ProcessedRecords, progress
 
 ### Error Handling
 
-Core 0.15.0+ returns structured errors with an `error_detail` object. When a service method returns an error, use `errors.As` to read the stable machine code — do not branch on message text:
+Core 0.15.0+ returns structured errors with an `error_detail` object. When a service method returns an error, use `errors.As` to read the stable machine code — do not branch on message text. Exported `ErrorCode*` constants mirror the full Core 0.15.4 catalogue (`TXN_ALREADY_REFUNDED`, `BAL_NOT_FOUND`, `TXN_INSUFFICIENT_FUNDS`, `TXN_DUPLICATE_REFERENCE`, `LGR_NOT_FOUND`, and so on):
 
 ```go
-_, resp, err := client.Transaction.Get("txn_missing")
+_, _, err := client.Transaction.Refund("txn_1")
 if err != nil {
     var apiErr *blnkgo.ApiErrorResponse
     if errors.As(err, &apiErr) && apiErr.ErrorDetail != nil {
         switch apiErr.ErrorDetail.Code {
+        case blnkgo.ErrorCodeTxnAlreadyRefunded:
+            // 409: already refunded, or this id is itself a refund — nothing to do
+        case blnkgo.ErrorCodeBalNotFound:
+            // 404: transaction named a missing balance (was TXN_NOT_FOUND before 0.15.4)
         case blnkgo.ErrorCodeTxnValidationError:
-            // negative amount/precision or source equal to destination
+            // negative amount/precision, source equal to destination, or both sources and destinations
         case blnkgo.ErrorCodeTxnInvalidAmount:
             // catalog code for invalid amounts
         case blnkgo.ErrorCodeGenConflict:
-            // duplicate internal-balance indicator + currency
+            // duplicate internal-balance indicator + currency, or multi-leg refund failed part-way
         default:
             fmt.Printf("API error %s: %s\n", apiErr.ErrorDetail.Code, apiErr.ErrorDetail.Message)
         }
