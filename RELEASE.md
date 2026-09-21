@@ -6,7 +6,7 @@ Aligns the Go SDK error catalogue with [Blnk Core 0.15.4](https://docs.blnkfinan
 
 ### Errors
 
-- Exported `ErrorCode*` constants now mirror Core's full `error_detail.code` catalogue (`internal/apierror/codes.go`), grouped by prefix: `GEN_`, `AUTH_`, `APIKEY_`, `TXN_`, `BAL_`, `LGR_`, `ACC_`, `IDT_`, `RECON_`, `META_`, `HOOK_`, `QUEUE_`, `SRCH_`, and `ADMIN_`. Each constant documents the HTTP status Core pairs it with.
+- Exported `ErrorCode*` constants now mirror the public [API Error Codes](https://docs.blnkfinance.com/advanced/error-codes) catalogue for Core 0.15.4 (78 codes), grouped by prefix: `GEN_`, `AUTH_`, `APIKEY_`, `TXN_`, `BAL_`, `LGR_`, `ACC_`, `IDT_`, `RECON_`, `META_`, `HOOK_`, `QUEUE_`, `SRCH_`, and `ADMIN_`. Each constant documents the HTTP status Core pairs it with. `ACC_GENERATION_FAILED` is omitted because account handlers only return `ACC_NOT_FOUND` and `ACC_DUPLICATE`.
 - Codes introduced or re-routed in Core 0.15.4 that callers should branch on:
   - `TXN_ALREADY_REFUNDED` (`409`): refunding a transaction twice, or refunding a refund. Previously the reversal went through.
   - `BAL_NOT_FOUND` (`404`): a transaction naming a missing balance. Previously reported as `TXN_NOT_FOUND`.

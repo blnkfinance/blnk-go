@@ -8,9 +8,11 @@ import (
 	"net/http"
 )
 
-// Core error_detail.code values, mirroring internal/apierror/codes.go in Blnk
-// Core 0.15.4. Compare ErrorDetail.Code — do not branch on message text.
+// Core error_detail.code values from the public API Error Codes catalogue
+// (Blnk Core 0.15.4). Compare ErrorDetail.Code — do not branch on message text.
 // Each comment gives the HTTP status Core sends with the code.
+// ACC_GENERATION_FAILED exists in Core's internal catalogue but is omitted
+// here: account handlers only emit ACC_NOT_FOUND and ACC_DUPLICATE.
 //
 // https://docs.blnkfinance.com/advanced/error-codes
 const (
@@ -136,8 +138,6 @@ const (
 	ErrorCodeAccNotFound = "ACC_NOT_FOUND"
 	// ErrorCodeAccDuplicate is 409.
 	ErrorCodeAccDuplicate = "ACC_DUPLICATE"
-	// ErrorCodeAccGenerationFailed is 500.
-	ErrorCodeAccGenerationFailed = "ACC_GENERATION_FAILED"
 
 	// IDT
 
@@ -271,7 +271,6 @@ var errorCodeCatalogue = []string{
 	ErrorCodeLgrDuplicate,
 	ErrorCodeAccNotFound,
 	ErrorCodeAccDuplicate,
-	ErrorCodeAccGenerationFailed,
 	ErrorCodeIdtNotFound,
 	ErrorCodeIdtValidationError,
 	ErrorCodeIdtFieldNotTokenizable,

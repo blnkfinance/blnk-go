@@ -1190,7 +1190,7 @@ fmt.Println(progress.Status, progress.Phase, progress.ProcessedRecords, progress
 
 ### Error Handling
 
-Core 0.15.0+ returns structured errors with an `error_detail` object. When a service method returns an error, use `errors.As` to read the stable machine code — do not branch on message text. Exported `ErrorCode*` constants mirror the full Core 0.15.4 catalogue (`TXN_ALREADY_REFUNDED`, `BAL_NOT_FOUND`, `TXN_INSUFFICIENT_FUNDS`, `TXN_DUPLICATE_REFERENCE`, `LGR_NOT_FOUND`, and so on):
+Core 0.15.0+ returns structured errors with an `error_detail` object. When a service method returns an error, use `errors.As` to read the stable machine code — do not branch on message text. Exported `ErrorCode*` constants mirror the public Core 0.15.4 catalogue (`TXN_ALREADY_REFUNDED`, `BAL_NOT_FOUND`, `TXN_INSUFFICIENT_FUNDS`, `TXN_DUPLICATE_REFERENCE`, `LGR_NOT_FOUND`, and so on):
 
 ```go
 _, _, err := client.Transaction.Refund("txn_1")

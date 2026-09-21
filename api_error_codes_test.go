@@ -17,8 +17,8 @@ func TestErrorCodeCatalogue_CountUniqueAndPrefixed(t *testing.T) {
 		prefixSet[p] = struct{}{}
 	}
 
-	if got := len(errorCodeCatalogue); got != 79 {
-		t.Fatalf("expected the full Core 0.15.4 catalogue (79 codes), got %d", got)
+	if got := len(errorCodeCatalogue); got != 78 {
+		t.Fatalf("expected the public Core 0.15.4 catalogue (78 codes), got %d", got)
 	}
 
 	for _, code := range errorCodeCatalogue {
@@ -96,7 +96,6 @@ func TestErrorCodeConstants_MatchExpectedStrings(t *testing.T) {
 		{"ErrorCodeLgrDuplicate", ErrorCodeLgrDuplicate, "LGR_DUPLICATE"},
 		{"ErrorCodeAccNotFound", ErrorCodeAccNotFound, "ACC_NOT_FOUND"},
 		{"ErrorCodeAccDuplicate", ErrorCodeAccDuplicate, "ACC_DUPLICATE"},
-		{"ErrorCodeAccGenerationFailed", ErrorCodeAccGenerationFailed, "ACC_GENERATION_FAILED"},
 		{"ErrorCodeIdtNotFound", ErrorCodeIdtNotFound, "IDT_NOT_FOUND"},
 		{"ErrorCodeIdtValidationError", ErrorCodeIdtValidationError, "IDT_VALIDATION_ERROR"},
 		{"ErrorCodeIdtFieldNotTokenizable", ErrorCodeIdtFieldNotTokenizable, "IDT_FIELD_NOT_TOKENIZABLE"},
@@ -128,8 +127,8 @@ func TestErrorCodeConstants_MatchExpectedStrings(t *testing.T) {
 		{"ErrorCodeAdminBackupFailed", ErrorCodeAdminBackupFailed, "ADMIN_BACKUP_FAILED"},
 	}
 
-	if len(cases) != 79 {
-		t.Fatalf("expected 79 constant assertions, got %d", len(cases))
+	if len(cases) != 78 {
+		t.Fatalf("expected 78 constant assertions, got %d", len(cases))
 	}
 
 	for _, tc := range cases {
