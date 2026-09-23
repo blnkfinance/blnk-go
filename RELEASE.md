@@ -1,8 +1,10 @@
 # Release Notes
 
-## Unreleased — Core 0.15.4
+## v1.5.0
 
-Aligns the Go SDK error catalogue with [Blnk Core 0.15.4](https://docs.blnkfinance.com/changelog/blnk-core).
+v1.5.0 targets **Blnk Core 0.15.4**. v1.4.0 shipped Core 0.15.3 dry-run previews, General Ledger `indicator`, refund narration/metadata, and three named error codes; this release aligns the exported error catalogue with Core 0.15.4.
+
+See the [API Error Codes](https://docs.blnkfinance.com/advanced/error-codes) catalogue and the [Core changelog](https://docs.blnkfinance.com/changelog/blnk-core).
 
 ### Errors
 
