@@ -54,10 +54,10 @@ git clone https://github.com/blnkfinance/blnk && cd blnk
 Install the Blnk Go SDK in your project:
 
 ```bash
-go get github.com/blnkfinance/blnk-go@v1.4.0
+go get github.com/blnkfinance/blnk-go@v1.5.0
 ```
 
-`v1.4.0` targets **Blnk Core 0.15.3**. See [RELEASE.md](RELEASE.md) for dry-run, General Ledger `indicator`, refund `description`/`meta_data`, and named error codes.
+`v1.5.0` targets **Blnk Core 0.15.4**. See [RELEASE.md](RELEASE.md) for the 78-code error catalogue (`ACC_GENERATION_FAILED` omitted) and Core 0.15.4 routing changes.
 
 ### Step 3: Setting Up Configuration
 
