@@ -12,7 +12,9 @@ The next release after v1.5.0. It stays on the v1 line. `client.BaseURL` and `cl
 
 ### Request paths
 
-- **`NewRequest` and `NewFileUploadRequest` reject off-host endpoints.** This is an intentional compatibility change on the public `ClientInterface`. Absolute URLs (`https://...`), scheme-relative URLs (`//host/...`), userinfo, backslashes, and paths that escape the configured base (`../`) now return an error instead of sending the API key to another host. Relative Core paths are unchanged. Callers that passed a full URL as the endpoint need to put that origin in `BaseURL` and pass only the path.
+- **`NewRequest` and `NewFileUploadRequest` reject off-host endpoints.** This stays on v1. It is not a new way to call another host, so it is not a major-version break. v1.5.0 joined the endpoint onto `BaseURL` with string concatenation. Passing `https://other-host/...` or `//other-host/...` did not change the request host; it became a path on the configured host. The new resolver would follow those forms off-host and attach `X-Blnk-Key`, so they now return an error instead. Relative Core paths are unchanged.
+- **Migration.** Keep passing a relative path (`ledgers`, `/ledgers`). To call another origin, set `BaseURL` (or `SetBaseURL`) to that origin and still pass only the path. There is no supported caller that was successfully sending the API key to a different host through the endpoint string.
+- **Redirects.** `CallWithRetry` refuses a redirect to a different host, for JSON and multipart requests. Go's default client would follow it and forward `X-Blnk-Key`, because it only strips `Authorization` and `Cookie`. Same-host redirects still follow, and the key stays on that host.
 
 v1.5.0 targets **Blnk Core 0.15.4**. v1.4.0 shipped Core 0.15.3 dry-run previews, General Ledger `indicator`, refund narration/metadata, and three named error codes; this release aligns the exported error catalogue with Core 0.15.4.
 

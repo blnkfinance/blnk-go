@@ -91,7 +91,10 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 		ApiKey:  apiKey,
 		BaseURL: baseURL,
 		options: DefaultOptions(),
-		client:  &http.Client{Timeout: 10 * time.Second},
+		client: &http.Client{
+			Timeout:       10 * time.Second,
+			CheckRedirect: refuseCrossHostRedirect,
+		},
 	}
 
 	//apply options
@@ -251,6 +254,22 @@ func resolveEndpoint(base *url.URL, endpoint string) (*url.URL, error) {
 	return resolved, nil
 }
 
+// refuseCrossHostRedirect stops Go from sending X-Blnk-Key to another host.
+// The default client strips Authorization and Cookie on a cross-host redirect
+// and leaves custom headers in place. Same-host redirects still follow.
+func refuseCrossHostRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) >= 10 {
+		return errors.New("stopped after 10 redirects")
+	}
+	if len(via) == 0 || req.URL == nil || via[len(via)-1].URL == nil {
+		return nil
+	}
+	if !strings.EqualFold(req.URL.Host, via[len(via)-1].URL.Host) {
+		return errors.New("refusing cross-host redirect")
+	}
+	return nil
+}
+
 func cloneURL(u *url.URL) *url.URL {
 	if u == nil {
 		return nil
@@ -392,6 +411,10 @@ func (c *Client) CallWithRetry(req *http.Request, resBody interface{}) (*http.Re
 
 		resp, err := c.client.Do(req)
 		if err != nil {
+			if resp != nil {
+				io.Copy(io.Discard, resp.Body)
+				resp.Body.Close()
+			}
 			lastErr = err
 			c.options.Logger.Info(err.Error())
 			if canRetry && attempt < maxAttempts && isRetryableNetworkError(err) {

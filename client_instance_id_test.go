@@ -653,6 +653,88 @@ func TestCloudProxyPort443RequiresInstanceID(t *testing.T) {
 	require.Equal(t, "instance_port", req.URL.Query().Get("instance_id"))
 }
 
+func TestCallWithRetry_RefusesCrossHostRedirect(t *testing.T) {
+	var otherSaw string
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		otherSaw = r.Header.Get("X-Blnk-Key")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer other.Close()
+
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "cloud_key", r.Header.Get("X-Blnk-Key"))
+		http.Redirect(w, r, other.URL+"/stolen", http.StatusFound)
+	}))
+	defer origin.Close()
+
+	base, err := url.Parse(origin.URL + "/")
+	require.NoError(t, err)
+	key := "cloud_key"
+	client := blnkgo.NewClient(base, &key)
+	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	resp, err := client.CallWithRetry(req, &map[string]any{})
+	require.Error(t, err)
+	require.ErrorContains(t, err, "cross-host redirect")
+	require.Nil(t, resp)
+	require.Empty(t, otherSaw)
+}
+
+func TestUpload_RefusesCrossHostRedirect(t *testing.T) {
+	var otherSaw string
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		otherSaw = r.Header.Get("X-Blnk-Key")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer other.Close()
+
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "cloud_key", r.Header.Get("X-Blnk-Key"))
+		require.Contains(t, r.Header.Get("Content-Type"), "multipart/form-data")
+		http.Redirect(w, r, other.URL+"/stolen", http.StatusFound)
+	}))
+	defer origin.Close()
+
+	base, err := url.Parse(origin.URL + "/")
+	require.NoError(t, err)
+	key := "cloud_key"
+	client := blnkgo.NewClient(base, &key)
+	_, resp, err := client.Reconciliation.Upload("bank", writeTempUpload(t), "upload.csv")
+	require.Error(t, err)
+	require.ErrorContains(t, err, "cross-host redirect")
+	require.Nil(t, resp)
+	require.Empty(t, otherSaw)
+}
+
+func TestCallWithRetry_FollowsSameHostRedirect(t *testing.T) {
+	var landed string
+	var mux http.ServeMux
+	server := httptest.NewServer(&mux)
+	defer server.Close()
+	mux.HandleFunc("/ledgers", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, server.URL+"/landed", http.StatusFound)
+	})
+	mux.HandleFunc("/landed", func(w http.ResponseWriter, r *http.Request) {
+		landed = r.Header.Get("X-Blnk-Key")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	})
+
+	base, err := url.Parse(server.URL + "/")
+	require.NoError(t, err)
+	key := "cloud_key"
+	client := blnkgo.NewClient(base, &key)
+	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	resp, err := client.CallWithRetry(req, &map[string]any{})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	resp.Body.Close()
+	require.Equal(t, "cloud_key", landed)
+}
+
 func writeTempUpload(t *testing.T) string {
 	t.Helper()
 	tmp := t.TempDir()
