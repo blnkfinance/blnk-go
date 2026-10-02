@@ -1,6 +1,18 @@
 # Release Notes
 
-## v1.5.0
+## Unreleased
+
+The next release after v1.5.0. It stays on the v1 line. `client.BaseURL` and `client.ApiKey` keep their existing pointer behavior.
+
+### Cloud Proxy
+
+- **`WithInstanceID`** — Fixed per client at `NewClient`. Every request, including file uploads, sends `instance_id` as a query parameter. Use `CloudProxyBaseURL` (`https://api.cloud.blnkfinance.com/proxy/`) with a Cloud API key. The ID must start with `instance_`, not `deployment_`. One client per Core instance.
+- **Proxy detection** — A base URL whose path ends in `/proxy` requires `WithInstanceID`, including enterprise hosts and `api.cloud.blnkfinance.com` with an explicit port such as `:443`.
+- **`SetBaseURLAndAPIKey`** — Changes the base URL and API key together. Each request reads the host and key in one snapshot, so failover cannot pair one host with another host's key.
+
+### Request paths
+
+- **`NewRequest` and `NewFileUploadRequest` reject off-host endpoints.** This is an intentional compatibility change on the public `ClientInterface`. Absolute URLs (`https://...`), scheme-relative URLs (`//host/...`), userinfo, backslashes, and paths that escape the configured base (`../`) now return an error instead of sending the API key to another host. Relative Core paths are unchanged. Callers that passed a full URL as the endpoint need to put that origin in `BaseURL` and pass only the path.
 
 v1.5.0 targets **Blnk Core 0.15.4**. v1.4.0 shipped Core 0.15.3 dry-run previews, General Ledger `indicator`, refund narration/metadata, and three named error codes; this release aligns the exported error catalogue with Core 0.15.4.
 

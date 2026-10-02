@@ -60,7 +60,7 @@ Install the Blnk Go SDK in your project:
 go get github.com/blnkfinance/blnk-go@v1.5.0
 ```
 
-`v1.5.0` targets **Blnk Core 0.15.4**. See [RELEASE.md](RELEASE.md) for the 78-code error catalogue (`ACC_GENERATION_FAILED` omitted) and Core 0.15.4 routing changes.
+`v1.5.0` is the latest released SDK. It targets **Blnk Core 0.15.4**. See [RELEASE.md](RELEASE.md) for the 78-code error catalogue (`ACC_GENERATION_FAILED` omitted) and Core 0.15.4 routing changes. Cloud Proxy (`WithInstanceID`) is not in `v1.5.0`; it ships in the next release.
 
 ### Step 3: Setting Up Configuration
 
@@ -188,6 +188,8 @@ Retry behavior (aligned with the TypeScript SDK):
 - Backoff delay is `RetryDelay × attempt` between retries (2s, 4s, … with default delay)
 
 ### Cloud Proxy
+
+**Unreleased.** This section describes the next SDK release after `v1.5.0`. `go get github.com/blnkfinance/blnk-go@v1.5.0` does not include `WithInstanceID` or `CloudProxyBaseURL`.
 
 To call Core through [Blnk Cloud Proxy](https://docs.blnkfinance.com/cloud/reference/proxy-api), use the Cloud Proxy base URL, a Cloud API key (`X-Blnk-Key`), and `WithInstanceID`. Request bodies and Core paths stay the same. Cloud requires `instance_id` as a query parameter on every proxy request.
 
