@@ -24,22 +24,18 @@ import (
 const CloudProxyBaseURL = "https://api.cloud.blnkfinance.com/proxy/"
 
 type Client struct {
+	// ApiKey is sent as X-Blnk-Key. Requests read the current value, so
+	// *client.ApiKey = "new" and replacing the pointer both take effect on the
+	// next request. The same is true for the string variable passed to NewClient.
 	ApiKey *string
-	// BaseURL is the configured base URL. It stays exported so existing code
-	// that reads or assigns client.BaseURL keeps compiling.
-	//
-	// Requests do not use this pointer directly. NewClient and SetBaseURL store
-	// a private copy, and the next request adopts a new assignment the same way.
-	// Changing Host, Path, or other fields on this URL does not redirect later
-	// requests. Prefer SetBaseURL when replacing the base URL.
+	// BaseURL is the Core or Cloud Proxy origin. Requests read the current
+	// value, so assigning the field or changing Host/Path takes effect on the
+	// next request. NewClient stores its own copy and does not modify the URL
+	// you passed in. SetBaseURL stores the pointer you pass, matching previous
+	// SDK behavior.
 	BaseURL        *url.URL
 	instanceID     string
 	mu             sync.RWMutex
-	owned          *url.URL
-	published      *url.URL
-	apiKeyValue    string
-	apiKeySet      bool
-	publishedKey   *string
 	options        Options
 	client         *http.Client
 	Ledger         *LedgerService
@@ -88,21 +84,17 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 		panic(errors.New("base url is required"))
 	}
 
-	// Own a copy so later mutation of the caller's *url.URL cannot redirect
-	// requests (and the API key) to another host. BaseURL is a separate copy
-	// for existing callers that read the exported field.
-	owned := cloneURL(baseURL)
-	ensureTrailingSlash(owned)
-	published := cloneURL(owned)
+	// Copy so NewClient does not edit the caller's URL when it adds a trailing
+	// slash. Later edits go through client.BaseURL or SetBaseURL.
+	base := cloneURL(baseURL)
+	ensureTrailingSlash(base)
 
 	//set default options if not provided
 	client := &Client{
-		ApiKey:    nil,
-		BaseURL:   published,
-		owned:     owned,
-		published: published,
-		options:   DefaultOptions(),
-		client:    &http.Client{Timeout: 10 * time.Second},
+		ApiKey:  apiKey,
+		BaseURL: base,
+		options: DefaultOptions(),
+		client:  &http.Client{Timeout: 10 * time.Second},
 	}
 
 	//apply options
@@ -129,83 +121,33 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 	client.Health = &HealthService{client: client}
 	client.ApiKeys = &ApiKeysService{client: client}
 	client.Hooks = &HooksService{client: client}
-	client.installAPIKey(apiKey)
 
 	return client
 }
 
+// SetBaseURL replaces the base URL. The client keeps this pointer, so later
+// changes to it are used by the next request. This matches the previous SDK.
 func (c *Client) SetBaseURL(baseURL *url.URL) {
-	copied := cloneURL(baseURL)
-	ensureTrailingSlash(copied)
-	published := cloneURL(copied)
 	c.mu.Lock()
-	c.owned = copied
-	c.published = published
-	c.BaseURL = published
+	c.BaseURL = baseURL
 	c.mu.Unlock()
 }
 
-// adoptBaseURLLocked keeps Client.BaseURL assignable without letting in-place
-// edits of that URL change where requests go. Caller must hold c.mu.
-func (c *Client) adoptBaseURLLocked() error {
-	if c.BaseURL != c.published {
-		if c.BaseURL == nil || c.BaseURL.String() == "" {
-			return errors.New("base url is required")
-		}
-		owned := cloneURL(c.BaseURL)
-		ensureTrailingSlash(owned)
-		c.owned = owned
-		c.published = cloneURL(owned)
-		c.BaseURL = c.published
-		return nil
-	}
-	if c.owned == nil {
-		return errors.New("base url is required")
-	}
-	if c.published != nil && c.published.String() != c.owned.String() {
-		c.published = cloneURL(c.owned)
-		c.BaseURL = c.published
-	}
-	return nil
-}
-
-func (c *Client) installAPIKey(apiKey *string) {
-	if apiKey == nil {
-		c.apiKeySet = false
-		c.apiKeyValue = ""
-		c.publishedKey = nil
-		c.ApiKey = nil
-		return
-	}
-	c.apiKeyValue = *apiKey
-	c.apiKeySet = true
-	published := c.apiKeyValue
-	c.publishedKey = &published
-	c.ApiKey = c.publishedKey
-}
-
-// adoptAPIKeyLocked keeps Client.ApiKey assignable without following later
-// writes to the caller's string variable. Caller must hold c.mu.
-func (c *Client) adoptAPIKeyLocked() {
-	if c.ApiKey != c.publishedKey {
-		c.installAPIKey(c.ApiKey)
-		return
-	}
-	if c.publishedKey != nil && *c.publishedKey != c.apiKeyValue {
-		published := c.apiKeyValue
-		c.publishedKey = &published
-		c.ApiKey = c.publishedKey
-	}
+// SetAPIKey replaces the key sent as X-Blnk-Key. The client keeps this pointer,
+// so later changes to the string are used by the next request.
+func (c *Client) SetAPIKey(apiKey *string) {
+	c.mu.Lock()
+	c.ApiKey = apiKey
+	c.mu.Unlock()
 }
 
 func (c *Client) apiKeyForRequest() (string, bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.adoptAPIKeyLocked()
-	if !c.apiKeySet {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.ApiKey == nil {
 		return "", false
 	}
-	return c.apiKeyValue, true
+	return *c.ApiKey, true
 }
 
 func ensureTrailingSlash(u *url.URL) {
@@ -237,12 +179,14 @@ func (c *Client) applyInstanceID(u *url.URL) error {
 }
 
 func (c *Client) snapshotBase() (*url.URL, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if err := c.adoptBaseURLLocked(); err != nil {
-		return nil, err
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.BaseURL == nil || c.BaseURL.String() == "" {
+		return nil, errors.New("base url is required")
 	}
-	return cloneURL(c.owned), nil
+	// Copy so URL resolution cannot edit the caller's BaseURL, while still
+	// observing Host, Path, and other edits made before this request.
+	return cloneURL(c.BaseURL), nil
 }
 
 // resolveEndpoint joins endpoint onto BaseURL using URL resolution so a missing
