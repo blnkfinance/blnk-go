@@ -224,6 +224,30 @@ func TestSetInstanceID_ConcurrentWithRequests(t *testing.T) {
 	wg.Wait()
 }
 
+func TestNewRequest_RejectsAbsoluteEndpoint(t *testing.T) {
+	u, err := url.Parse(blnkgo.CloudProxyBaseURL)
+	require.NoError(t, err)
+	apiKey := "cloud_key"
+	client := blnkgo.NewClient(u, &apiKey, blnkgo.WithInstanceID("instance_abs"))
+
+	req, err := client.NewRequest("https://example.com/path", http.MethodPost, blnkgo.CreateLedgerRequest{Name: "Abs"})
+	require.Error(t, err)
+	require.Nil(t, req)
+	require.Contains(t, err.Error(), "relative path")
+}
+
+func TestNewRequest_RejectsSchemeRelativeEndpoint(t *testing.T) {
+	u, err := url.Parse(blnkgo.CloudProxyBaseURL)
+	require.NoError(t, err)
+	apiKey := "cloud_key"
+	client := blnkgo.NewClient(u, &apiKey, blnkgo.WithInstanceID("instance_scheme"))
+
+	req, err := client.NewRequest("//example.com/path", http.MethodGet, nil)
+	require.Error(t, err)
+	require.Nil(t, req)
+	require.Contains(t, err.Error(), "relative path")
+}
+
 func writeTempUpload(t *testing.T) string {
 	t.Helper()
 	tmp := t.TempDir()

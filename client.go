@@ -150,6 +150,9 @@ func (c *Client) resolveEndpoint(endpoint string) (*url.URL, error) {
 	if err != nil {
 		return nil, err
 	}
+	if ref.IsAbs() || ref.Host != "" {
+		return nil, errors.New("endpoint must be a relative path")
+	}
 	base := *c.BaseURL
 	if !strings.HasSuffix(base.Path, "/") {
 		base.Path += "/"
