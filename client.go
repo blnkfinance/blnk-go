@@ -27,7 +27,7 @@ type Client struct {
 	ApiKey         *string
 	instanceID     string
 	mu             sync.RWMutex
-	BaseURL        *url.URL
+	baseURL        *url.URL
 	options        Options
 	client         *http.Client
 	Ledger         *LedgerService
@@ -76,15 +76,15 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 		panic(errors.New("base url is required"))
 	}
 
-	//check if base url ends with a "/", if it doesnt append it
-	if baseURL.String()[len(baseURL.String())-1:] != "/" {
-		baseURL.Path += "/"
-	}
+	// Own a copy so later mutation of the caller's *url.URL cannot redirect
+	// requests (and the API key) to another host.
+	owned := cloneURL(baseURL)
+	ensureTrailingSlash(owned)
 
 	//set default options if not provided
 	client := &Client{
 		ApiKey:  apiKey,
-		BaseURL: baseURL,
+		baseURL: owned,
 		options: DefaultOptions(),
 		client:  &http.Client{Timeout: 10 * time.Second},
 	}
@@ -119,12 +119,29 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 
 func (c *Client) SetBaseURL(baseURL *url.URL) {
 	copied := cloneURL(baseURL)
-	if copied != nil && !strings.HasSuffix(copied.Path, "/") {
-		copied.Path += "/"
-	}
+	ensureTrailingSlash(copied)
 	c.mu.Lock()
-	c.BaseURL = copied
+	c.baseURL = copied
 	c.mu.Unlock()
+}
+
+// BaseURL returns a copy of the configured base URL. Mutating the result does
+// not change later requests. Use SetBaseURL to replace the base URL.
+func (c *Client) BaseURL() *url.URL {
+	u, err := c.snapshotBase()
+	if err != nil {
+		return nil
+	}
+	return u
+}
+
+func ensureTrailingSlash(u *url.URL) {
+	if u == nil || u.String() == "" {
+		return
+	}
+	if u.String()[len(u.String())-1:] != "/" {
+		u.Path += "/"
+	}
 }
 
 func (c *Client) applyInstanceID(u *url.URL) error {
@@ -149,10 +166,10 @@ func (c *Client) applyInstanceID(u *url.URL) error {
 func (c *Client) snapshotBase() (*url.URL, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	if c.BaseURL == nil {
+	if c.baseURL == nil {
 		return nil, errors.New("base url is required")
 	}
-	return cloneURL(c.BaseURL), nil
+	return cloneURL(c.baseURL), nil
 }
 
 // resolveEndpoint joins endpoint onto BaseURL using URL resolution so a missing

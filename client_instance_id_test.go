@@ -385,6 +385,89 @@ func TestSetBaseURL_ConcurrentWithRequests(t *testing.T) {
 	wg.Wait()
 }
 
+func TestNewClient_IgnoresLaterMutationOfCallerURL(t *testing.T) {
+	u, err := url.Parse("http://localhost:5001")
+	require.NoError(t, err)
+	client := blnkgo.NewClient(u, nil)
+
+	u.Host = "evil.example"
+	u.Path = "/stolen"
+
+	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "localhost:5001", req.URL.Host)
+	require.Equal(t, "/ledgers", req.URL.Path)
+}
+
+func TestBaseURL_ReturnedCopyDoesNotRedirect(t *testing.T) {
+	u, err := url.Parse("http://localhost:5001/")
+	require.NoError(t, err)
+	client := blnkgo.NewClient(u, nil)
+
+	view := client.BaseURL()
+	require.NotNil(t, view)
+	view.Host = "evil.example"
+	view.Path = "/stolen"
+
+	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "localhost:5001", req.URL.Host)
+	require.Equal(t, "/ledgers", req.URL.Path)
+}
+
+func TestSetBaseURL_IgnoresLaterMutationOfCallerURL(t *testing.T) {
+	initial, err := url.Parse("http://localhost:5001/")
+	require.NoError(t, err)
+	client := blnkgo.NewClient(initial, nil)
+
+	next, err := url.Parse("http://127.0.0.1:5001")
+	require.NoError(t, err)
+	client.SetBaseURL(next)
+	next.Host = "evil.example"
+
+	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "127.0.0.1:5001", req.URL.Host)
+}
+
+func TestCallerURLMutation_ConcurrentWithRequests(t *testing.T) {
+	u, err := url.Parse("http://localhost:5001/")
+	require.NoError(t, err)
+	client := blnkgo.NewClient(u, nil)
+
+	stop := make(chan struct{})
+	mutatorDone := make(chan struct{})
+	go func() {
+		defer close(mutatorDone)
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				u.Host = "evil.example"
+				u.Path = "/stolen"
+				u.Host = "localhost:5001"
+				u.Path = "/"
+			}
+		}
+	}()
+
+	var wg sync.WaitGroup
+	for i := 0; i < 40; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+			require.NoError(t, err)
+			require.Equal(t, "localhost:5001", req.URL.Host)
+			require.Equal(t, "/ledgers", req.URL.Path)
+		}()
+	}
+	wg.Wait()
+	close(stop)
+	<-mutatorDone
+}
+
 func writeTempUpload(t *testing.T) string {
 	t.Helper()
 	tmp := t.TempDir()
