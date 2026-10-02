@@ -27,3 +27,12 @@ func WithTimeout(timeout time.Duration) ClientOption {
 		c.options.Timeout = timeout
 	}
 }
+
+// WithInstanceID sets the Cloud Core instance ID. When non-empty, every
+// request includes instance_id as a query parameter. Required for Cloud Proxy
+// API calls: https://docs.blnkfinance.com/cloud/reference/proxy-api
+func WithInstanceID(instanceID string) ClientOption {
+	return func(c *Client) {
+		c.InstanceID = instanceID
+	}
+}

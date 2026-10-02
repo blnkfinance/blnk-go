@@ -16,6 +16,9 @@ The official Go SDK for Blnk - A powerful ledger system for financial applicatio
 - [2. Launching Blnk](#2-launching-blnk)
 - [3. Using the Blnk CLI](#3-using-the-blnk-cli)
 - [4. Creating Your First Ledger](#4-creating-your-first-ledger)
+  - [Retries](#retries)
+  - [Cloud Proxy](#cloud-proxy)
+  - [Updating a Ledger Name](#updating-a-ledger-name)
 - [5. Creating Balances](#5-creating-balances)
 - [6. Recording Transactions](#6-recording-transactions)
 - [7. Advanced Features](#7-advanced-features)
@@ -183,6 +186,27 @@ Retry behavior (aligned with the TypeScript SDK):
 - **POST**, **PUT**, and **DELETE** are **not** retried (avoids duplicate money movement)
 - Request timeouts are not retried
 - Backoff delay is `RetryDelay × attempt` between retries (2s, 4s, … with default delay)
+
+### Cloud Proxy
+
+To call Core through [Blnk Cloud Proxy](https://docs.blnkfinance.com/cloud/reference/proxy-api), use the Cloud Proxy base URL, a Cloud API key (`X-Blnk-Key`), and `WithInstanceID`. Request bodies and Core paths stay the same. Cloud requires `instance_id` as a query parameter on every proxy request.
+
+```go
+baseURL, _ := url.Parse(blnkgo.CloudProxyBaseURL) // https://api.cloud.blnkfinance.com/proxy/
+cloudAPIKey := "YOUR_CLOUD_API_KEY"
+client := blnkgo.NewClient(
+    baseURL,
+    &cloudAPIKey,
+    blnkgo.WithInstanceID("inst_YOUR_INSTANCE_ID"),
+    blnkgo.WithTimeout(10*time.Second),
+)
+
+ledger, resp, err := client.Ledger.Create(blnkgo.CreateLedgerRequest{
+    Name: "My Integration Ledger",
+})
+```
+
+That sends `POST https://api.cloud.blnkfinance.com/proxy/ledgers?instance_id=inst_YOUR_INSTANCE_ID`. Use `instance_...` from instance details, not `deployment_id`. Direct Core clients can omit `WithInstanceID`.
 
 ### Updating a Ledger Name
 

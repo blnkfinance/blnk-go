@@ -16,8 +16,14 @@ import (
 	"github.com/google/go-querystring/query"
 )
 
+// CloudProxyBaseURL is the Blnk Cloud Proxy API base. Use it as BaseURL with
+// WithInstanceID so Core paths are routed through Cloud:
+// https://api.cloud.blnkfinance.com/proxy/{path}?instance_id=YOUR_INSTANCE_ID
+const CloudProxyBaseURL = "https://api.cloud.blnkfinance.com/proxy/"
+
 type Client struct {
 	ApiKey         *string
+	InstanceID     string
 	BaseURL        *url.URL
 	options        Options
 	client         *http.Client
@@ -112,6 +118,19 @@ func (c *Client) SetBaseURL(baseURL *url.URL) {
 	c.BaseURL = baseURL
 }
 
+func (c *Client) SetInstanceID(instanceID string) {
+	c.InstanceID = instanceID
+}
+
+func (c *Client) applyInstanceID(u *url.URL) {
+	if c.InstanceID == "" {
+		return
+	}
+	q := u.Query()
+	q.Set("instance_id", c.InstanceID)
+	u.RawQuery = q.Encode()
+}
+
 func (c *Client) NewRequest(endpoint, method string, opt interface{}) (*http.Request, error) {
 	//creates and returns a new HTTP request
 	//endpoint is the API endpoint
@@ -133,6 +152,8 @@ func (c *Client) NewRequest(endpoint, method string, opt interface{}) (*http.Req
 
 		u.RawQuery = q.Encode()
 	}
+
+	c.applyInstanceID(u)
 
 	var bodyBytes []byte
 	if method != http.MethodGet && opt != nil {
@@ -290,8 +311,14 @@ func (c *Client) NewFileUploadRequest(endpoint string, fileParam string, file in
 		return nil, err
 	}
 
+	u, err := url.Parse(c.BaseURL.String() + endpoint)
+	if err != nil {
+		return nil, err
+	}
+	c.applyInstanceID(u)
+
 	// Create the HTTP request
-	req, err := http.NewRequest(http.MethodPost, c.BaseURL.ResolveReference(&url.URL{Path: endpoint}).String(), io.NopCloser(body))
+	req, err := http.NewRequest(http.MethodPost, u.String(), io.NopCloser(body))
 
 	if err != nil {
 		return nil, err
