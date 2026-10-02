@@ -523,6 +523,87 @@ func TestSetAPIKey_RotationConcurrentWithRequests(t *testing.T) {
 	wg.Wait()
 }
 
+func TestSetBaseURLAndAPIKey_HostAndKeyAlwaysMatch(t *testing.T) {
+	hostA, err := url.Parse("http://instance-a.internal:5001/")
+	require.NoError(t, err)
+	hostB, err := url.Parse("http://instance-b.internal:5001/")
+	require.NoError(t, err)
+	keyA, keyB := "key_for_a", "key_for_b"
+	expected := map[string]string{
+		"instance-a.internal:5001": "key_for_a",
+		"instance-b.internal:5001": "key_for_b",
+	}
+	client := blnkgo.NewClient(hostA, &keyA)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 200; i++ {
+		wg.Add(2)
+		go func(i int) {
+			defer wg.Done()
+			if i%2 == 0 {
+				client.SetBaseURLAndAPIKey(hostB, &keyB)
+			} else {
+				client.SetBaseURLAndAPIKey(hostA, &keyA)
+			}
+		}(i)
+		go func(i int) {
+			defer wg.Done()
+			var req *http.Request
+			var err error
+			if i%3 == 0 {
+				path := filepath.Join(t.TempDir(), "upload.csv")
+				require.NoError(t, os.WriteFile(path, []byte("id\n1\n"), 0o644))
+				req, err = client.NewFileUploadRequest("reconciliation/upload", "file", path, "", nil)
+			} else {
+				req, err = client.NewRequest("transactions", http.MethodPost, blnkgo.CreateLedgerRequest{Name: "pair"})
+			}
+			require.NoError(t, err)
+			want, known := expected[req.URL.Host]
+			require.True(t, known, "unexpected host %q", req.URL.Host)
+			require.Equal(t, want, req.Header.Get("X-Blnk-Key"), "host %q paired with wrong key", req.URL.Host)
+		}(i)
+	}
+	wg.Wait()
+}
+
+func TestEnterpriseProxyBaseRequiresInstanceID(t *testing.T) {
+	base, err := url.Parse("https://cloud.enterprise.example/proxy/")
+	require.NoError(t, err)
+	client := blnkgo.NewClient(base, nil)
+	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+	require.Error(t, err)
+	require.Nil(t, req)
+	require.Contains(t, err.Error(), "instance_id")
+
+	client = blnkgo.NewClient(base, nil, blnkgo.WithInstanceID("deployment_x"))
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.Error(t, err)
+	require.Nil(t, req)
+	require.Contains(t, err.Error(), "instance_")
+
+	client = blnkgo.NewClient(base, nil, blnkgo.WithInstanceID("instance_ent"))
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "cloud.enterprise.example", req.URL.Host)
+	require.Equal(t, "/proxy/ledgers", req.URL.Path)
+	require.Equal(t, "instance_ent", req.URL.Query().Get("instance_id"))
+
+	mounted, err := url.Parse("https://cloud.enterprise.example/api/v1/proxy")
+	require.NoError(t, err)
+	client = blnkgo.NewClient(mounted, nil)
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.Error(t, err)
+	require.Nil(t, req)
+	require.Contains(t, err.Error(), "instance_id")
+
+	core, err := url.Parse("https://core.enterprise.example/")
+	require.NoError(t, err)
+	client = blnkgo.NewClient(core, nil)
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Empty(t, req.URL.Query().Get("instance_id"))
+}
+
 func TestSetBaseURL_FailoverConcurrentWithRequests(t *testing.T) {
 	primary, err := url.Parse("http://primary.internal:5001/")
 	require.NoError(t, err)

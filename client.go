@@ -140,13 +140,38 @@ func (c *Client) SetAPIKey(apiKey *string) {
 	c.mu.Unlock()
 }
 
-func (c *Client) apiKeyForRequest() (string, bool) {
+// SetBaseURLAndAPIKey replaces the base URL and API key together, so no
+// request can pair the new host with the old key or the old host with the new
+// key. Use it for failover to another Core instance that has its own key.
+func (c *Client) SetBaseURLAndAPIKey(baseURL *url.URL, apiKey *string) {
+	c.mu.Lock()
+	c.BaseURL = baseURL
+	c.ApiKey = apiKey
+	c.mu.Unlock()
+}
+
+// requestConfig is one request's view of the client configuration, read under
+// a single lock so the host and key always come from the same moment.
+type requestConfig struct {
+	base   *url.URL
+	apiKey string
+	hasKey bool
+}
+
+func (c *Client) snapshotConfig() (requestConfig, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	if c.ApiKey == nil {
-		return "", false
+	if c.BaseURL == nil || c.BaseURL.String() == "" {
+		return requestConfig{}, errors.New("base url is required")
 	}
-	return *c.ApiKey, true
+	// Copy so URL resolution cannot edit the caller's BaseURL, and so one
+	// request validates and uses the same host.
+	cfg := requestConfig{base: cloneURL(c.BaseURL)}
+	if c.ApiKey != nil {
+		cfg.apiKey = *c.ApiKey
+		cfg.hasKey = true
+	}
+	return cfg, nil
 }
 
 func ensureTrailingSlash(u *url.URL) {
@@ -158,9 +183,11 @@ func ensureTrailingSlash(u *url.URL) {
 	}
 }
 
-func (c *Client) applyInstanceID(u *url.URL) error {
+// applyInstanceID adds instance_id to u. Proxy requests must carry an
+// instance_... ID; base is the configured base URL the request was built from.
+func (c *Client) applyInstanceID(u, base *url.URL) error {
 	id := c.instanceID
-	if isCloudProxyURL(u) {
+	if isProxyBase(base) || isCloudProxyURL(u) {
 		if id == "" {
 			return errors.New("instance_id is required for Cloud Proxy requests")
 		}
@@ -177,27 +204,26 @@ func (c *Client) applyInstanceID(u *url.URL) error {
 	return nil
 }
 
-func (c *Client) snapshotBase() (*url.URL, error) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	if c.BaseURL == nil || c.BaseURL.String() == "" {
-		return nil, errors.New("base url is required")
+// requestURL reads the configuration once and resolves endpoint against it, so
+// the returned URL and key belong to the same snapshot.
+func (c *Client) requestURL(endpoint string) (*url.URL, requestConfig, error) {
+	cfg, err := c.snapshotConfig()
+	if err != nil {
+		return nil, requestConfig{}, err
 	}
-	// Copy so URL resolution cannot edit the caller's BaseURL, and so one
-	// request validates and uses the same host.
-	return cloneURL(c.BaseURL), nil
+	u, err := resolveEndpoint(cfg.base, endpoint)
+	if err != nil {
+		return nil, requestConfig{}, err
+	}
+	return u, cfg, nil
 }
 
-// resolveEndpoint joins endpoint onto BaseURL using URL resolution so a missing
+// resolveEndpoint joins endpoint onto base using URL resolution so a missing
 // trailing slash on SetBaseURL, or a leading slash on the endpoint, does not
 // produce a malformed path. Absolute, scheme-relative, userinfo, and
 // base-escaping endpoints are rejected so the client cannot send its API key
-// off-host.
-func (c *Client) resolveEndpoint(endpoint string) (*url.URL, error) {
-	base, err := c.snapshotBase()
-	if err != nil {
-		return nil, err
-	}
+// off-host. base is a private copy and may be edited.
+func resolveEndpoint(base *url.URL, endpoint string) (*url.URL, error) {
 	if strings.Contains(endpoint, "\\") {
 		return nil, errors.New("endpoint must be a relative path")
 	}
@@ -237,6 +263,20 @@ func cloneURL(u *url.URL) *url.URL {
 	return &copied
 }
 
+// isProxyBase reports whether the configured base URL points at a Cloud Proxy
+// mount (its path ends in /proxy). This is host-independent so enterprise
+// Cloud deployments on their own domain are validated the same way.
+func isProxyBase(base *url.URL) bool {
+	if base == nil {
+		return false
+	}
+	baseDir := strings.TrimSuffix(base.Path, "/")
+	return baseDir == "/proxy" || strings.HasSuffix(baseDir, "/proxy")
+}
+
+// isCloudProxyURL reports whether a resolved request URL targets the hosted
+// Cloud Proxy, for callers whose base URL is the Cloud origin and whose
+// endpoint carries the /proxy prefix.
 func isCloudProxyURL(u *url.URL) bool {
 	if u == nil {
 		return false
@@ -274,7 +314,7 @@ func (c *Client) NewRequest(endpoint, method string, opt interface{}) (*http.Req
 	//opt is the request body
 	//returns the request and an error if any
 
-	u, err := c.resolveEndpoint(endpoint)
+	u, cfg, err := c.requestURL(endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +333,7 @@ func (c *Client) NewRequest(endpoint, method string, opt interface{}) (*http.Req
 		u.RawQuery = q.Encode()
 	}
 
-	if err := c.applyInstanceID(u); err != nil {
+	if err := c.applyInstanceID(u, cfg.base); err != nil {
 		return nil, err
 	}
 
@@ -324,8 +364,8 @@ func (c *Client) NewRequest(endpoint, method string, opt interface{}) (*http.Req
 	}
 
 	//if c has api key, add it to the header
-	if key, ok := c.apiKeyForRequest(); ok {
-		req.Header.Add("X-Blnk-Key", key)
+	if cfg.hasKey {
+		req.Header.Add("X-Blnk-Key", cfg.apiKey)
 	}
 	req.Header.Add("Content-Type", "application/json")
 
@@ -449,15 +489,14 @@ func (c *Client) NewFileUploadRequest(endpoint string, fileParam string, file in
 	}
 
 	if err := writer.Close(); err != nil {
-		fmt.Println("in error", err)
 		return nil, err
 	}
 
-	u, err := c.resolveEndpoint(endpoint)
+	u, cfg, err := c.requestURL(endpoint)
 	if err != nil {
 		return nil, err
 	}
-	if err := c.applyInstanceID(u); err != nil {
+	if err := c.applyInstanceID(u, cfg.base); err != nil {
 		return nil, err
 	}
 
@@ -468,9 +507,8 @@ func (c *Client) NewFileUploadRequest(endpoint string, fileParam string, file in
 		return nil, err
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	//print out the file type
-	if key, ok := c.apiKeyForRequest(); ok {
-		req.Header.Add("X-Blnk-Key", key)
+	if cfg.hasKey {
+		req.Header.Add("X-Blnk-Key", cfg.apiKey)
 	}
 
 	return req, nil
