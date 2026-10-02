@@ -385,71 +385,175 @@ func TestSetBaseURL_ConcurrentWithRequests(t *testing.T) {
 	wg.Wait()
 }
 
-func TestNewClient_DoesNotAliasCallerURL(t *testing.T) {
+// The v1 contract: the client keeps the URL pointer passed to NewClient and
+// reads the exported BaseURL field on every request.
+func TestV1Compat_BaseURLFieldAndCallerURLStayLive(t *testing.T) {
 	u, err := url.Parse("http://localhost:5001")
 	require.NoError(t, err)
 	client := blnkgo.NewClient(u, nil)
+	require.Same(t, u, client.BaseURL)
+	require.Equal(t, "/", u.Path)
 
-	originalPath := u.Path
-	u.Host = "evil.example"
-	u.Path = "/stolen"
-
+	u.Host = "caller-edit.internal"
 	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
-	require.Equal(t, "localhost:5001", req.URL.Host)
-	require.Equal(t, "/ledgers", req.URL.Path)
-	require.Equal(t, "/stolen", u.Path)
-	require.NotEqual(t, originalPath, u.Path)
-
-	client.BaseURL.Host = "backup.internal"
-	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
-	require.NoError(t, err)
-	require.Equal(t, "localhost:5001", req.URL.Host)
-}
-
-func TestClientBaseURLChangesOnlyThroughSetBaseURL(t *testing.T) {
-	u, err := url.Parse("http://localhost:5001/")
-	require.NoError(t, err)
-	client := blnkgo.NewClient(u, nil)
-	require.NotNil(t, client.BaseURL)
-	require.Equal(t, "localhost:5001", client.BaseURL.Host)
+	require.Equal(t, "caller-edit.internal", req.URL.Host)
 
 	client.BaseURL.Host = "failover.internal"
-	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+	client.BaseURL.Path = "/core/"
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
-	require.Equal(t, "localhost:5001", req.URL.Host)
+	require.Equal(t, "failover.internal", req.URL.Host)
+	require.Equal(t, "/core/ledgers", req.URL.Path)
+
+	next, err := url.Parse("http://127.0.0.1:5001/")
+	require.NoError(t, err)
+	client.BaseURL = next
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "127.0.0.1:5001", req.URL.Host)
+
+	client.BaseURL = nil
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.Error(t, err)
+	require.Nil(t, req)
+}
+
+func TestV1Compat_SetBaseURLKeepsPointer(t *testing.T) {
+	initial, err := url.Parse("http://localhost:5001/")
+	require.NoError(t, err)
+	client := blnkgo.NewClient(initial, nil)
 
 	next, err := url.Parse("http://127.0.0.1:5001/")
 	require.NoError(t, err)
 	client.SetBaseURL(next)
-	next.Host = "after-assign.internal"
-	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.Same(t, next, client.BaseURL)
+	next.Host = "failover.internal"
+
+	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
-	require.Equal(t, "127.0.0.1:5001", req.URL.Host)
+	require.Equal(t, "failover.internal", req.URL.Host)
+	require.Equal(t, "/ledgers", req.URL.Path)
 }
 
-func TestAPIKeyChangesOnlyThroughSetAPIKey(t *testing.T) {
+func TestV1Compat_APIKeyFieldAndCallerStringStayLive(t *testing.T) {
 	key := "cloud_key"
 	u, err := url.Parse("http://localhost:5001/")
 	require.NoError(t, err)
 	client := blnkgo.NewClient(u, &key)
+	require.Same(t, &key, client.ApiKey)
 
 	key = "rotated"
 	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
-	require.Equal(t, "cloud_key", req.Header.Get("X-Blnk-Key"))
+	require.Equal(t, "rotated", req.Header.Get("X-Blnk-Key"))
 
 	*client.ApiKey = "rotated-in-place"
 	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
-	require.Equal(t, "cloud_key", req.Header.Get("X-Blnk-Key"))
+	require.Equal(t, "rotated-in-place", req.Header.Get("X-Blnk-Key"))
 
 	assigned := "assigned_key"
-	client.SetAPIKey(&assigned)
-	assigned = "assigned-again"
+	client.ApiKey = &assigned
 	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
 	require.Equal(t, "assigned_key", req.Header.Get("X-Blnk-Key"))
+
+	viaSetter := "setter_key"
+	client.SetAPIKey(&viaSetter)
+	require.Same(t, &viaSetter, client.ApiKey)
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "setter_key", req.Header.Get("X-Blnk-Key"))
+
+	client.SetAPIKey(nil)
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Empty(t, req.Header.Get("X-Blnk-Key"))
+}
+
+func TestNewRequest_GETOptionsKeepEndpointQuery(t *testing.T) {
+	u, err := url.Parse("http://localhost:5001/")
+	require.NoError(t, err)
+	client := blnkgo.NewClient(u, nil)
+
+	req, err := client.NewRequest("hooks?page=2&type=old", http.MethodGet, blnkgo.ListHooksOptions{Type: blnkgo.HookTypePreTransaction})
+	require.NoError(t, err)
+	q := req.URL.Query()
+	require.Equal(t, "2", q.Get("page"))
+	require.Equal(t, string(blnkgo.HookTypePreTransaction), q.Get("type"))
+	require.Equal(t, []string{string(blnkgo.HookTypePreTransaction)}, q["type"])
+	require.Equal(t, "/hooks", req.URL.Path)
+
+	proxy, err := url.Parse(blnkgo.CloudProxyBaseURL)
+	require.NoError(t, err)
+	client = blnkgo.NewClient(proxy, nil, blnkgo.WithInstanceID("instance_q"))
+	req, err = client.NewRequest("hooks?page=3&instance_id=instance_other", http.MethodGet, blnkgo.ListHooksOptions{Type: blnkgo.HookTypePreTransaction})
+	require.NoError(t, err)
+	q = req.URL.Query()
+	require.Equal(t, "3", q.Get("page"))
+	require.Equal(t, string(blnkgo.HookTypePreTransaction), q.Get("type"))
+	require.Equal(t, []string{"instance_q"}, q["instance_id"])
+}
+
+func TestSetAPIKey_RotationConcurrentWithRequests(t *testing.T) {
+	keyA, keyB := "key_a", "key_b"
+	u, err := url.Parse("http://localhost:5001/")
+	require.NoError(t, err)
+	client := blnkgo.NewClient(u, &keyA)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(2)
+		go func(i int) {
+			defer wg.Done()
+			if i%2 == 0 {
+				client.SetAPIKey(&keyB)
+			} else {
+				client.SetAPIKey(&keyA)
+			}
+		}(i)
+		go func() {
+			defer wg.Done()
+			req, err := client.NewRequest("ledgers", http.MethodPost, blnkgo.CreateLedgerRequest{Name: "race"})
+			require.NoError(t, err)
+			require.Contains(t, []string{"key_a", "key_b"}, req.Header.Get("X-Blnk-Key"))
+		}()
+	}
+	wg.Wait()
+}
+
+func TestSetBaseURL_FailoverConcurrentWithRequests(t *testing.T) {
+	primary, err := url.Parse("http://primary.internal:5001/")
+	require.NoError(t, err)
+	backup, err := url.Parse("http://backup.internal:5001/")
+	require.NoError(t, err)
+	key := "core_key"
+	client := blnkgo.NewClient(primary, &key)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(2)
+		go func(i int) {
+			defer wg.Done()
+			if i%2 == 0 {
+				client.SetBaseURL(backup)
+			} else {
+				client.SetBaseURL(primary)
+			}
+		}(i)
+		go func() {
+			defer wg.Done()
+			path := filepath.Join(t.TempDir(), "upload.csv")
+			require.NoError(t, os.WriteFile(path, []byte("id\n1\n"), 0o644))
+			req, err := client.NewFileUploadRequest("reconciliation/upload", "file", path, "", nil)
+			require.NoError(t, err)
+			require.Contains(t, []string{"primary.internal:5001", "backup.internal:5001"}, req.URL.Host)
+			require.Equal(t, "/reconciliation/upload", req.URL.Path)
+			require.Equal(t, "core_key", req.Header.Get("X-Blnk-Key"))
+		}()
+	}
+	wg.Wait()
 }
 
 func TestCloudProxyPort443RequiresInstanceID(t *testing.T) {
@@ -466,60 +570,6 @@ func TestCloudProxyPort443RequiresInstanceID(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "api.cloud.blnkfinance.com:443", req.URL.Host)
 	require.Equal(t, "instance_port", req.URL.Query().Get("instance_id"))
-}
-
-func TestSetBaseURL_IgnoresLaterMutationOfCallerURL(t *testing.T) {
-	initial, err := url.Parse("http://localhost:5001/")
-	require.NoError(t, err)
-	client := blnkgo.NewClient(initial, nil)
-
-	next, err := url.Parse("http://127.0.0.1:5001/")
-	require.NoError(t, err)
-	client.SetBaseURL(next)
-	next.Host = "failover.internal"
-
-	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
-	require.NoError(t, err)
-	require.Equal(t, "127.0.0.1:5001", req.URL.Host)
-	require.Equal(t, "/ledgers", req.URL.Path)
-}
-
-func TestCallerURLMutation_ConcurrentWithRequests(t *testing.T) {
-	u, err := url.Parse("http://localhost:5001/")
-	require.NoError(t, err)
-	client := blnkgo.NewClient(u, nil)
-
-	stop := make(chan struct{})
-	mutatorDone := make(chan struct{})
-	go func() {
-		defer close(mutatorDone)
-		for {
-			select {
-			case <-stop:
-				return
-			default:
-				u.Host = "evil.example"
-				u.Path = "/stolen"
-				u.Host = "localhost:5001"
-				u.Path = "/"
-			}
-		}
-	}()
-
-	var wg sync.WaitGroup
-	for i := 0; i < 40; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			req, err := client.NewRequest("ledgers", http.MethodGet, nil)
-			require.NoError(t, err)
-			require.Equal(t, "localhost:5001", req.URL.Host)
-			require.Equal(t, "/ledgers", req.URL.Path)
-		}()
-	}
-	wg.Wait()
-	close(stop)
-	<-mutatorDone
 }
 
 func writeTempUpload(t *testing.T) string {

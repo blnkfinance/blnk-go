@@ -24,21 +24,18 @@ import (
 const CloudProxyBaseURL = "https://api.cloud.blnkfinance.com/proxy/"
 
 type Client struct {
-	// ApiKey is the last key passed to NewClient or SetAPIKey. Requests use an
-	// internal copy. Changing this string, or the string you originally passed,
-	// does not rotate the key. Call SetAPIKey.
+	// ApiKey is sent as X-Blnk-Key. As in earlier v1 releases, the client keeps
+	// the pointer passed to NewClient or SetAPIKey and reads it on each request.
+	// Direct edits are not synchronized. While requests may be running, rotate
+	// the key with SetAPIKey and a new string instead.
 	ApiKey *string
-	// BaseURL is the last base URL passed to NewClient or SetBaseURL. Requests
-	// use an internal copy. Assigning this field, or editing Host or Path, does
-	// not retarget the client. Call SetBaseURL. NewClient and SetBaseURL both
-	// copy the URL, so the pointer you pass is not shared. This differs from
-	// older releases, which kept that pointer.
+	// BaseURL is the Core or Cloud Proxy origin. As in earlier v1 releases, the
+	// client keeps the pointer passed to NewClient or SetBaseURL and reads it on
+	// each request. Direct edits are not synchronized. While requests may be
+	// running, fail over with SetBaseURL and a new *url.URL instead.
 	BaseURL        *url.URL
 	instanceID     string
 	mu             sync.RWMutex
-	ownedBase      *url.URL
-	apiKeyValue    string
-	apiKeySet      bool
 	options        Options
 	client         *http.Client
 	Ledger         *LedgerService
@@ -87,18 +84,14 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 		panic(errors.New("base url is required"))
 	}
 
-	// Copy so NewClient does not edit the caller's URL when it adds a trailing
-	// slash. Later base URL changes go through SetBaseURL.
-	base := cloneURL(baseURL)
-	ensureTrailingSlash(base)
-	view := cloneURL(base)
+	ensureTrailingSlash(baseURL)
 
 	//set default options if not provided
 	client := &Client{
-		BaseURL:   view,
-		ownedBase: base,
-		options:   DefaultOptions(),
-		client:    &http.Client{Timeout: 10 * time.Second},
+		ApiKey:  apiKey,
+		BaseURL: baseURL,
+		options: DefaultOptions(),
+		client:  &http.Client{Timeout: 10 * time.Second},
 	}
 
 	//apply options
@@ -125,51 +118,35 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 	client.Health = &HealthService{client: client}
 	client.ApiKeys = &ApiKeysService{client: client}
 	client.Hooks = &HooksService{client: client}
-	client.SetAPIKey(apiKey)
 
 	return client
 }
 
-// SetBaseURL replaces the base URL. The client copies it under its lock.
-// Later edits to the URL you passed in, or to client.BaseURL, do not change
-// later requests. That is a breaking change from the previous shared pointer.
+// SetBaseURL replaces the base URL and keeps the pointer, as in earlier v1
+// releases. It is safe to call while other goroutines build requests. Pass a
+// new *url.URL rather than editing one the client already uses.
 func (c *Client) SetBaseURL(baseURL *url.URL) {
-	copied := cloneURL(baseURL)
-	ensureTrailingSlash(copied)
-	view := cloneURL(copied)
 	c.mu.Lock()
-	c.ownedBase = copied
-	c.BaseURL = view
+	c.BaseURL = baseURL
 	c.mu.Unlock()
 }
 
-// SetAPIKey replaces the key sent as X-Blnk-Key. The client copies the string
-// under its lock. Later edits to the caller's string do not change requests.
+// SetAPIKey replaces the key sent as X-Blnk-Key and keeps the pointer, like
+// the ApiKey field. It is safe to call while other goroutines build requests.
+// Pass a new string rather than editing one the client already uses.
 func (c *Client) SetAPIKey(apiKey *string) {
-	var value string
-	set := apiKey != nil
-	if set {
-		value = *apiKey
-	}
 	c.mu.Lock()
-	c.apiKeyValue = value
-	c.apiKeySet = set
-	if set {
-		published := value
-		c.ApiKey = &published
-	} else {
-		c.ApiKey = nil
-	}
+	c.ApiKey = apiKey
 	c.mu.Unlock()
 }
 
 func (c *Client) apiKeyForRequest() (string, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	if !c.apiKeySet {
+	if c.ApiKey == nil {
 		return "", false
 	}
-	return c.apiKeyValue, true
+	return *c.ApiKey, true
 }
 
 func ensureTrailingSlash(u *url.URL) {
@@ -203,11 +180,12 @@ func (c *Client) applyInstanceID(u *url.URL) error {
 func (c *Client) snapshotBase() (*url.URL, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	if c.ownedBase == nil || c.ownedBase.String() == "" {
+	if c.BaseURL == nil || c.BaseURL.String() == "" {
 		return nil, errors.New("base url is required")
 	}
-	// Copy so URL resolution cannot edit the owned base URL.
-	return cloneURL(c.ownedBase), nil
+	// Copy so URL resolution cannot edit the caller's BaseURL, and so one
+	// request validates and uses the same host.
+	return cloneURL(c.BaseURL), nil
 }
 
 // resolveEndpoint joins endpoint onto BaseURL using URL resolution so a missing
@@ -301,13 +279,17 @@ func (c *Client) NewRequest(endpoint, method string, opt interface{}) (*http.Req
 		return nil, err
 	}
 
-	//if method is get and opt is not nil, add query params to the url
+	// For GET, merge opt into any query already on the endpoint. Keys from opt
+	// win when both set the same key.
 	if method == http.MethodGet && opt != nil {
-		q, err := query.Values(opt)
+		values, err := query.Values(opt)
 		if err != nil {
 			return nil, err
 		}
-
+		q := u.Query()
+		for key, vals := range values {
+			q[key] = vals
+		}
 		u.RawQuery = q.Encode()
 	}
 
