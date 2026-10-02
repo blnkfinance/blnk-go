@@ -24,10 +24,22 @@ import (
 const CloudProxyBaseURL = "https://api.cloud.blnkfinance.com/proxy/"
 
 type Client struct {
-	ApiKey         *string
+	ApiKey *string
+	// BaseURL is the configured base URL. It stays exported so existing code
+	// that reads or assigns client.BaseURL keeps compiling.
+	//
+	// Requests do not use this pointer directly. NewClient and SetBaseURL store
+	// a private copy, and the next request adopts a new assignment the same way.
+	// Changing Host, Path, or other fields on this URL does not redirect later
+	// requests. Prefer SetBaseURL when replacing the base URL.
+	BaseURL        *url.URL
 	instanceID     string
 	mu             sync.RWMutex
-	baseURL        *url.URL
+	owned          *url.URL
+	published      *url.URL
+	apiKeyValue    string
+	apiKeySet      bool
+	publishedKey   *string
 	options        Options
 	client         *http.Client
 	Ledger         *LedgerService
@@ -77,16 +89,20 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 	}
 
 	// Own a copy so later mutation of the caller's *url.URL cannot redirect
-	// requests (and the API key) to another host.
+	// requests (and the API key) to another host. BaseURL is a separate copy
+	// for existing callers that read the exported field.
 	owned := cloneURL(baseURL)
 	ensureTrailingSlash(owned)
+	published := cloneURL(owned)
 
 	//set default options if not provided
 	client := &Client{
-		ApiKey:  apiKey,
-		baseURL: owned,
-		options: DefaultOptions(),
-		client:  &http.Client{Timeout: 10 * time.Second},
+		ApiKey:    nil,
+		BaseURL:   published,
+		owned:     owned,
+		published: published,
+		options:   DefaultOptions(),
+		client:    &http.Client{Timeout: 10 * time.Second},
 	}
 
 	//apply options
@@ -113,6 +129,7 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 	client.Health = &HealthService{client: client}
 	client.ApiKeys = &ApiKeysService{client: client}
 	client.Hooks = &HooksService{client: client}
+	client.installAPIKey(apiKey)
 
 	return client
 }
@@ -120,19 +137,75 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 func (c *Client) SetBaseURL(baseURL *url.URL) {
 	copied := cloneURL(baseURL)
 	ensureTrailingSlash(copied)
+	published := cloneURL(copied)
 	c.mu.Lock()
-	c.baseURL = copied
+	c.owned = copied
+	c.published = published
+	c.BaseURL = published
 	c.mu.Unlock()
 }
 
-// BaseURL returns a copy of the configured base URL. Mutating the result does
-// not change later requests. Use SetBaseURL to replace the base URL.
-func (c *Client) BaseURL() *url.URL {
-	u, err := c.snapshotBase()
-	if err != nil {
+// adoptBaseURLLocked keeps Client.BaseURL assignable without letting in-place
+// edits of that URL change where requests go. Caller must hold c.mu.
+func (c *Client) adoptBaseURLLocked() error {
+	if c.BaseURL != c.published {
+		if c.BaseURL == nil || c.BaseURL.String() == "" {
+			return errors.New("base url is required")
+		}
+		owned := cloneURL(c.BaseURL)
+		ensureTrailingSlash(owned)
+		c.owned = owned
+		c.published = cloneURL(owned)
+		c.BaseURL = c.published
 		return nil
 	}
-	return u
+	if c.owned == nil {
+		return errors.New("base url is required")
+	}
+	if c.published != nil && c.published.String() != c.owned.String() {
+		c.published = cloneURL(c.owned)
+		c.BaseURL = c.published
+	}
+	return nil
+}
+
+func (c *Client) installAPIKey(apiKey *string) {
+	if apiKey == nil {
+		c.apiKeySet = false
+		c.apiKeyValue = ""
+		c.publishedKey = nil
+		c.ApiKey = nil
+		return
+	}
+	c.apiKeyValue = *apiKey
+	c.apiKeySet = true
+	published := c.apiKeyValue
+	c.publishedKey = &published
+	c.ApiKey = c.publishedKey
+}
+
+// adoptAPIKeyLocked keeps Client.ApiKey assignable without following later
+// writes to the caller's string variable. Caller must hold c.mu.
+func (c *Client) adoptAPIKeyLocked() {
+	if c.ApiKey != c.publishedKey {
+		c.installAPIKey(c.ApiKey)
+		return
+	}
+	if c.publishedKey != nil && *c.publishedKey != c.apiKeyValue {
+		published := c.apiKeyValue
+		c.publishedKey = &published
+		c.ApiKey = c.publishedKey
+	}
+}
+
+func (c *Client) apiKeyForRequest() (string, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.adoptAPIKeyLocked()
+	if !c.apiKeySet {
+		return "", false
+	}
+	return c.apiKeyValue, true
 }
 
 func ensureTrailingSlash(u *url.URL) {
@@ -164,12 +237,12 @@ func (c *Client) applyInstanceID(u *url.URL) error {
 }
 
 func (c *Client) snapshotBase() (*url.URL, error) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	if c.baseURL == nil {
-		return nil, errors.New("base url is required")
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.adoptBaseURLLocked(); err != nil {
+		return nil, err
 	}
-	return cloneURL(c.baseURL), nil
+	return cloneURL(c.owned), nil
 }
 
 // resolveEndpoint joins endpoint onto BaseURL using URL resolution so a missing
@@ -306,8 +379,8 @@ func (c *Client) NewRequest(endpoint, method string, opt interface{}) (*http.Req
 	}
 
 	//if c has api key, add it to the header
-	if c.ApiKey != nil {
-		req.Header.Add("X-Blnk-Key", *c.ApiKey)
+	if key, ok := c.apiKeyForRequest(); ok {
+		req.Header.Add("X-Blnk-Key", key)
 	}
 	req.Header.Add("Content-Type", "application/json")
 
@@ -451,8 +524,8 @@ func (c *Client) NewFileUploadRequest(endpoint string, fileParam string, file in
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	//print out the file type
-	if c.ApiKey != nil {
-		req.Header.Add("X-Blnk-Key", *c.ApiKey)
+	if key, ok := c.apiKeyForRequest(); ok {
+		req.Header.Add("X-Blnk-Key", key)
 	}
 
 	return req, nil

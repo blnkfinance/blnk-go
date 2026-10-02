@@ -399,20 +399,66 @@ func TestNewClient_IgnoresLaterMutationOfCallerURL(t *testing.T) {
 	require.Equal(t, "/ledgers", req.URL.Path)
 }
 
-func TestBaseURL_ReturnedCopyDoesNotRedirect(t *testing.T) {
+func TestClientBaseURLFieldStaysCompatible(t *testing.T) {
 	u, err := url.Parse("http://localhost:5001/")
 	require.NoError(t, err)
 	client := blnkgo.NewClient(u, nil)
+	require.NotNil(t, client.BaseURL)
+	require.Equal(t, "localhost:5001", client.BaseURL.Host)
 
-	view := client.BaseURL()
-	require.NotNil(t, view)
-	view.Host = "evil.example"
-	view.Path = "/stolen"
-
+	client.BaseURL.Host = "evil.example"
+	client.BaseURL.Path = "/stolen"
 	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
 	require.Equal(t, "localhost:5001", req.URL.Host)
 	require.Equal(t, "/ledgers", req.URL.Path)
+	require.Equal(t, "localhost:5001", client.BaseURL.Host)
+
+	next, err := url.Parse("http://127.0.0.1:5001/")
+	require.NoError(t, err)
+	client.BaseURL = next
+	req, err = client.NewRequest("balances", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "127.0.0.1:5001", req.URL.Host)
+	require.Equal(t, "/balances", req.URL.Path)
+
+	next.Host = "evil.example"
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "127.0.0.1:5001", req.URL.Host)
+
+	client.BaseURL = nil
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.Error(t, err)
+	require.Nil(t, req)
+}
+
+func TestAPIKeyFieldStaysCompatible(t *testing.T) {
+	key := "cloud_key"
+	u, err := url.Parse("http://localhost:5001/")
+	require.NoError(t, err)
+	client := blnkgo.NewClient(u, &key)
+
+	key = "replaced-by-caller"
+	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "cloud_key", req.Header.Get("X-Blnk-Key"))
+
+	*client.ApiKey = "mutated-in-place"
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "cloud_key", req.Header.Get("X-Blnk-Key"))
+
+	assigned := "assigned_key"
+	client.ApiKey = &assigned
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "assigned_key", req.Header.Get("X-Blnk-Key"))
+
+	assigned = "changed-after-assign"
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "assigned_key", req.Header.Get("X-Blnk-Key"))
 }
 
 func TestSetBaseURL_IgnoresLaterMutationOfCallerURL(t *testing.T) {
