@@ -197,7 +197,7 @@ cloudAPIKey := "YOUR_CLOUD_API_KEY"
 client := blnkgo.NewClient(
     baseURL,
     &cloudAPIKey,
-    blnkgo.WithInstanceID("inst_YOUR_INSTANCE_ID"),
+    blnkgo.WithInstanceID("instance_YOUR_INSTANCE_ID"),
     blnkgo.WithTimeout(10*time.Second),
 )
 
@@ -206,7 +206,7 @@ ledger, resp, err := client.Ledger.Create(blnkgo.CreateLedgerRequest{
 })
 ```
 
-That sends `POST https://api.cloud.blnkfinance.com/proxy/ledgers?instance_id=inst_YOUR_INSTANCE_ID`. Use `instance_...` from instance details, not `deployment_id`. Direct Core clients can omit `WithInstanceID`.
+That sends `POST https://api.cloud.blnkfinance.com/proxy/ledgers?instance_id=instance_YOUR_INSTANCE_ID`. Use `instance_...` from instance details, not `deployment_id`. Direct Core clients can omit `WithInstanceID`.
 
 ### Updating a Ledger Name
 

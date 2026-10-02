@@ -33,6 +33,6 @@ func WithTimeout(timeout time.Duration) ClientOption {
 // API calls: https://docs.blnkfinance.com/cloud/reference/proxy-api
 func WithInstanceID(instanceID string) ClientOption {
 	return func(c *Client) {
-		c.InstanceID = instanceID
+		c.instanceID = instanceID
 	}
 }

@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/go-querystring/query"
@@ -23,7 +25,8 @@ const CloudProxyBaseURL = "https://api.cloud.blnkfinance.com/proxy/"
 
 type Client struct {
 	ApiKey         *string
-	InstanceID     string
+	instanceID     string
+	instanceMu     sync.RWMutex
 	BaseURL        *url.URL
 	options        Options
 	client         *http.Client
@@ -119,16 +122,42 @@ func (c *Client) SetBaseURL(baseURL *url.URL) {
 }
 
 func (c *Client) SetInstanceID(instanceID string) {
-	c.InstanceID = instanceID
+	c.instanceMu.Lock()
+	c.instanceID = instanceID
+	c.instanceMu.Unlock()
 }
 
 func (c *Client) applyInstanceID(u *url.URL) {
-	if c.InstanceID == "" {
+	c.instanceMu.RLock()
+	id := c.instanceID
+	c.instanceMu.RUnlock()
+	if id == "" {
 		return
 	}
 	q := u.Query()
-	q.Set("instance_id", c.InstanceID)
+	q.Set("instance_id", id)
 	u.RawQuery = q.Encode()
+}
+
+// resolveEndpoint joins endpoint onto BaseURL using URL resolution so a missing
+// trailing slash on SetBaseURL, or a leading slash on the endpoint, does not
+// produce a malformed path.
+func (c *Client) resolveEndpoint(endpoint string) (*url.URL, error) {
+	if c.BaseURL == nil {
+		return nil, errors.New("base url is required")
+	}
+	ref, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	base := *c.BaseURL
+	if !strings.HasSuffix(base.Path, "/") {
+		base.Path += "/"
+	}
+	if strings.HasPrefix(ref.Path, "/") {
+		ref.Path = strings.TrimPrefix(ref.Path, "/")
+	}
+	return base.ResolveReference(ref), nil
 }
 
 func (c *Client) NewRequest(endpoint, method string, opt interface{}) (*http.Request, error) {
@@ -138,7 +167,7 @@ func (c *Client) NewRequest(endpoint, method string, opt interface{}) (*http.Req
 	//opt is the request body
 	//returns the request and an error if any
 
-	u, err := url.Parse(c.BaseURL.String() + endpoint)
+	u, err := c.resolveEndpoint(endpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +340,7 @@ func (c *Client) NewFileUploadRequest(endpoint string, fileParam string, file in
 		return nil, err
 	}
 
-	u, err := url.Parse(c.BaseURL.String() + endpoint)
+	u, err := c.resolveEndpoint(endpoint)
 	if err != nil {
 		return nil, err
 	}
