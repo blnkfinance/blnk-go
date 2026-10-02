@@ -191,6 +191,8 @@ Retry behavior (aligned with the TypeScript SDK):
 
 To call Core through [Blnk Cloud Proxy](https://docs.blnkfinance.com/cloud/reference/proxy-api), use the Cloud Proxy base URL, a Cloud API key (`X-Blnk-Key`), and `WithInstanceID`. Request bodies and Core paths stay the same. Cloud requires `instance_id` as a query parameter on every proxy request.
 
+Create **one client per Core instance**. The instance ID is fixed at `NewClient` and is not changed at runtime. Targeting another instance means constructing another client.
+
 ```go
 baseURL, _ := url.Parse(blnkgo.CloudProxyBaseURL) // https://api.cloud.blnkfinance.com/proxy/
 cloudAPIKey := "YOUR_CLOUD_API_KEY"

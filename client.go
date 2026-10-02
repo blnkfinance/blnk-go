@@ -26,7 +26,7 @@ const CloudProxyBaseURL = "https://api.cloud.blnkfinance.com/proxy/"
 type Client struct {
 	ApiKey         *string
 	instanceID     string
-	instanceMu     sync.RWMutex
+	mu             sync.RWMutex
 	BaseURL        *url.URL
 	options        Options
 	client         *http.Client
@@ -118,49 +118,122 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 }
 
 func (c *Client) SetBaseURL(baseURL *url.URL) {
-	c.BaseURL = baseURL
+	copied := cloneURL(baseURL)
+	if copied != nil && !strings.HasSuffix(copied.Path, "/") {
+		copied.Path += "/"
+	}
+	c.mu.Lock()
+	c.BaseURL = copied
+	c.mu.Unlock()
 }
 
-func (c *Client) SetInstanceID(instanceID string) {
-	c.instanceMu.Lock()
-	c.instanceID = instanceID
-	c.instanceMu.Unlock()
-}
-
-func (c *Client) applyInstanceID(u *url.URL) {
-	c.instanceMu.RLock()
+func (c *Client) applyInstanceID(u *url.URL) error {
 	id := c.instanceID
-	c.instanceMu.RUnlock()
+	if isCloudProxyURL(u) {
+		if id == "" {
+			return errors.New("instance_id is required for Cloud Proxy requests")
+		}
+		if !strings.HasPrefix(id, "instance_") {
+			return errors.New("Cloud instance_id must start with instance_")
+		}
+	}
 	if id == "" {
-		return
+		return nil
 	}
 	q := u.Query()
 	q.Set("instance_id", id)
 	u.RawQuery = q.Encode()
+	return nil
+}
+
+func (c *Client) snapshotBase() (*url.URL, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.BaseURL == nil {
+		return nil, errors.New("base url is required")
+	}
+	return cloneURL(c.BaseURL), nil
 }
 
 // resolveEndpoint joins endpoint onto BaseURL using URL resolution so a missing
 // trailing slash on SetBaseURL, or a leading slash on the endpoint, does not
-// produce a malformed path.
+// produce a malformed path. Absolute, scheme-relative, userinfo, and
+// base-escaping endpoints are rejected so the client cannot send its API key
+// off-host.
 func (c *Client) resolveEndpoint(endpoint string) (*url.URL, error) {
-	if c.BaseURL == nil {
-		return nil, errors.New("base url is required")
+	base, err := c.snapshotBase()
+	if err != nil {
+		return nil, err
+	}
+	if strings.Contains(endpoint, "\\") {
+		return nil, errors.New("endpoint must be a relative path")
 	}
 	ref, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
 	}
-	if ref.IsAbs() || ref.Host != "" {
+	if ref.IsAbs() || ref.Scheme != "" || ref.Host != "" || ref.User != nil || ref.Opaque != "" {
 		return nil, errors.New("endpoint must be a relative path")
 	}
-	base := *c.BaseURL
 	if !strings.HasSuffix(base.Path, "/") {
 		base.Path += "/"
 	}
 	if strings.HasPrefix(ref.Path, "/") {
 		ref.Path = strings.TrimPrefix(ref.Path, "/")
 	}
-	return base.ResolveReference(ref), nil
+	ref.Path = trimRedundantProxyPrefix(base.Path, ref.Path)
+	resolved := base.ResolveReference(ref)
+	if resolved.Scheme != base.Scheme || resolved.Host != base.Host {
+		return nil, errors.New("endpoint must be a relative path")
+	}
+	if !staysWithinBase(base.Path, resolved.Path) {
+		return nil, errors.New("endpoint escapes the configured base URL")
+	}
+	return resolved, nil
+}
+
+func cloneURL(u *url.URL) *url.URL {
+	if u == nil {
+		return nil
+	}
+	copied := *u
+	if u.User != nil {
+		user := *u.User
+		copied.User = &user
+	}
+	return &copied
+}
+
+func isCloudProxyURL(u *url.URL) bool {
+	if u == nil {
+		return false
+	}
+	if !strings.EqualFold(u.Host, "api.cloud.blnkfinance.com") {
+		return false
+	}
+	path := u.Path
+	return path == "/proxy" || strings.HasPrefix(path, "/proxy/")
+}
+
+func trimRedundantProxyPrefix(basePath, refPath string) string {
+	baseDir := strings.TrimSuffix(basePath, "/")
+	if baseDir != "/proxy" && !strings.HasSuffix(baseDir, "/proxy") {
+		return refPath
+	}
+	if refPath == "proxy" {
+		return ""
+	}
+	return strings.TrimPrefix(refPath, "proxy/")
+}
+
+func staysWithinBase(basePath, resolvedPath string) bool {
+	if !strings.HasSuffix(basePath, "/") {
+		basePath += "/"
+	}
+	if resolvedPath == strings.TrimSuffix(basePath, "/") {
+		return true
+	}
+	return strings.HasPrefix(resolvedPath, basePath)
 }
 
 func (c *Client) NewRequest(endpoint, method string, opt interface{}) (*http.Request, error) {
@@ -185,7 +258,9 @@ func (c *Client) NewRequest(endpoint, method string, opt interface{}) (*http.Req
 		u.RawQuery = q.Encode()
 	}
 
-	c.applyInstanceID(u)
+	if err := c.applyInstanceID(u); err != nil {
+		return nil, err
+	}
 
 	var bodyBytes []byte
 	if method != http.MethodGet && opt != nil {
@@ -347,7 +422,9 @@ func (c *Client) NewFileUploadRequest(endpoint string, fileParam string, file in
 	if err != nil {
 		return nil, err
 	}
-	c.applyInstanceID(u)
+	if err := c.applyInstanceID(u); err != nil {
+		return nil, err
+	}
 
 	// Create the HTTP request
 	req, err := http.NewRequest(http.MethodPost, u.String(), io.NopCloser(body))

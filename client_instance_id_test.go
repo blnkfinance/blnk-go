@@ -73,19 +73,18 @@ func TestNewRequest_MergesInstanceIDWithGETQueryOptions(t *testing.T) {
 	require.Equal(t, string(blnkgo.HookTypePreTransaction), q.Get("type"))
 }
 
-func TestSetInstanceID_AppliesToSubsequentRequests(t *testing.T) {
-	u, err := url.Parse("http://localhost:5001/")
+func TestInstanceID_IsFixedPerClient(t *testing.T) {
+	u, err := url.Parse(blnkgo.CloudProxyBaseURL)
 	require.NoError(t, err)
-	client := blnkgo.NewClient(u, nil)
+	clientA := blnkgo.NewClient(u, nil, blnkgo.WithInstanceID("instance_a"))
+	clientB := blnkgo.NewClient(u, nil, blnkgo.WithInstanceID("instance_b"))
 
-	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+	reqA, err := clientA.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
-	require.Empty(t, req.URL.Query().Get("instance_id"))
-
-	client.SetInstanceID("instance_set")
-	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	reqB, err := clientB.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
-	require.Equal(t, "instance_set", req.URL.Query().Get("instance_id"))
+	require.Equal(t, "instance_a", reqA.URL.Query().Get("instance_id"))
+	require.Equal(t, "instance_b", reqB.URL.Query().Get("instance_id"))
 }
 
 func TestNewFileUploadRequest_AddsInstanceIDQueryParam(t *testing.T) {
@@ -200,25 +199,21 @@ func TestNewFileUploadRequest_SetBaseURLWithAndWithoutTrailingSlash(t *testing.T
 	require.Equal(t, "instance_upload_base", req.URL.Query().Get("instance_id"))
 }
 
-func TestSetInstanceID_ConcurrentWithRequests(t *testing.T) {
-	u, err := url.Parse("http://localhost:5001/")
+func TestNewRequest_ConcurrentReadsSameInstanceID(t *testing.T) {
+	u, err := url.Parse(blnkgo.CloudProxyBaseURL)
 	require.NoError(t, err)
-	client := blnkgo.NewClient(u, nil, blnkgo.WithInstanceID("instance_a"))
+	client := blnkgo.NewClient(u, nil, blnkgo.WithInstanceID("instance_fixed"))
 
-	ids := []string{"instance_a", "instance_b", "instance_c"}
 	var wg sync.WaitGroup
 	for i := 0; i < 100; i++ {
-		wg.Add(2)
-		go func(i int) {
-			defer wg.Done()
-			client.SetInstanceID(ids[i%len(ids)])
-		}(i)
+		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			req, err := client.NewRequest("ledgers", http.MethodGet, nil)
 			require.NoError(t, err)
-			got := req.URL.Query().Get("instance_id")
-			require.Contains(t, ids, got)
+			require.Equal(t, "instance_fixed", req.URL.Query().Get("instance_id"))
+			require.Equal(t, "api.cloud.blnkfinance.com", req.URL.Host)
+			require.Equal(t, "/proxy/ledgers", req.URL.Path)
 		}()
 	}
 	wg.Wait()
@@ -246,6 +241,148 @@ func TestNewRequest_RejectsSchemeRelativeEndpoint(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, req)
 	require.Contains(t, err.Error(), "relative path")
+}
+
+func TestNewRequest_RejectsUserinfoEndpoint(t *testing.T) {
+	u, err := url.Parse(blnkgo.CloudProxyBaseURL)
+	require.NoError(t, err)
+	apiKey := "cloud_key"
+	client := blnkgo.NewClient(u, &apiKey, blnkgo.WithInstanceID("instance_userinfo"))
+
+	req, err := client.NewRequest("//user:pass@example.com/ledgers", http.MethodGet, nil)
+	require.Error(t, err)
+	require.Nil(t, req)
+	require.Contains(t, err.Error(), "relative path")
+}
+
+func TestNewRequest_RejectsPathTraversalEndpoint(t *testing.T) {
+	u, err := url.Parse(blnkgo.CloudProxyBaseURL)
+	require.NoError(t, err)
+	apiKey := "cloud_key"
+	client := blnkgo.NewClient(u, &apiKey, blnkgo.WithInstanceID("instance_traverse"))
+
+	req, err := client.NewRequest("../data/lake", http.MethodGet, nil)
+	require.Error(t, err)
+	require.Nil(t, req)
+	require.Contains(t, err.Error(), "escapes")
+}
+
+func TestNewRequest_OverwritesInjectedInstanceID(t *testing.T) {
+	u, err := url.Parse(blnkgo.CloudProxyBaseURL)
+	require.NoError(t, err)
+	client := blnkgo.NewClient(u, nil, blnkgo.WithInstanceID("instance_client"))
+
+	req, err := client.NewRequest("ledgers?instance_id=instance_attacker&limit=10", http.MethodGet, nil)
+	require.NoError(t, err)
+	q := req.URL.Query()
+	require.Equal(t, "instance_client", q.Get("instance_id"))
+	require.Equal(t, []string{"instance_client"}, q["instance_id"])
+	require.Equal(t, "10", q.Get("limit"))
+}
+
+func TestNewRequest_CloudProxyRequiresInstanceID(t *testing.T) {
+	u, err := url.Parse(blnkgo.CloudProxyBaseURL)
+	require.NoError(t, err)
+	client := blnkgo.NewClient(u, nil)
+
+	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+	require.Error(t, err)
+	require.Nil(t, req)
+	require.Contains(t, err.Error(), "instance_id is required")
+}
+
+func TestNewRequest_CloudProxyRejectsNonInstancePrefix(t *testing.T) {
+	u, err := url.Parse(blnkgo.CloudProxyBaseURL)
+	require.NoError(t, err)
+	client := blnkgo.NewClient(u, nil, blnkgo.WithInstanceID("deploy_not_an_instance"))
+
+	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+	require.Error(t, err)
+	require.Nil(t, req)
+	require.Contains(t, err.Error(), "instance_")
+}
+
+func TestNewRequest_AlreadyProxyEndpointDoesNotDouble(t *testing.T) {
+	u, err := url.Parse(blnkgo.CloudProxyBaseURL)
+	require.NoError(t, err)
+	client := blnkgo.NewClient(u, nil, blnkgo.WithInstanceID("instance_proxy"))
+
+	req, err := client.NewRequest("/proxy/ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "/proxy/ledgers", req.URL.Path)
+	require.Equal(t, "instance_proxy", req.URL.Query().Get("instance_id"))
+}
+
+func TestNewRequest_SetBaseURLWithoutTrailingSlash(t *testing.T) {
+	initial, err := url.Parse("http://localhost:5001/")
+	require.NoError(t, err)
+	client := blnkgo.NewClient(initial, nil)
+
+	withoutSlash, err := url.Parse("https://api.cloud.blnkfinance.com/proxy")
+	require.NoError(t, err)
+	client.SetBaseURL(withoutSlash)
+
+	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+	require.Error(t, err)
+	require.Nil(t, req)
+
+	client = blnkgo.NewClient(initial, nil, blnkgo.WithInstanceID("instance_base"))
+	client.SetBaseURL(withoutSlash)
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "/proxy/ledgers", req.URL.Path)
+	require.Equal(t, "instance_base", req.URL.Query().Get("instance_id"))
+}
+
+func TestNewFileUploadRequest_RejectsAbsoluteAndSchemeRelative(t *testing.T) {
+	u, err := url.Parse(blnkgo.CloudProxyBaseURL)
+	require.NoError(t, err)
+	apiKey := "cloud_key"
+	client := blnkgo.NewClient(u, &apiKey, blnkgo.WithInstanceID("instance_upload_sec"))
+	path := writeTempUpload(t)
+
+	req, err := client.NewFileUploadRequest("https://example.com/upload", "file", path, "upload.csv", map[string]string{"source": "bank"})
+	require.Error(t, err)
+	require.Nil(t, req)
+
+	req, err = client.NewFileUploadRequest("//example.com/upload", "file", path, "upload.csv", map[string]string{"source": "bank"})
+	require.Error(t, err)
+	require.Nil(t, req)
+}
+
+func TestSetBaseURL_ConcurrentWithRequests(t *testing.T) {
+	core, err := url.Parse("http://localhost:5001/")
+	require.NoError(t, err)
+	proxy, err := url.Parse(blnkgo.CloudProxyBaseURL)
+	require.NoError(t, err)
+	client := blnkgo.NewClient(core, nil, blnkgo.WithInstanceID("instance_race"))
+
+	var wg sync.WaitGroup
+	for i := 0; i < 50; i++ {
+		wg.Add(2)
+		go func(i int) {
+			defer wg.Done()
+			if i%2 == 0 {
+				client.SetBaseURL(proxy)
+			} else {
+				client.SetBaseURL(core)
+			}
+		}(i)
+		go func() {
+			defer wg.Done()
+			req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+			if err != nil {
+				require.Contains(t, err.Error(), "instance_id is required")
+				return
+			}
+			require.Contains(t, []string{"localhost:5001", "api.cloud.blnkfinance.com"}, req.URL.Host)
+			if req.URL.Host == "api.cloud.blnkfinance.com" {
+				require.Equal(t, "instance_race", req.URL.Query().Get("instance_id"))
+				require.True(t, strings.HasPrefix(req.URL.Path, "/proxy/"))
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 func writeTempUpload(t *testing.T) string {
