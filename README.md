@@ -193,7 +193,7 @@ To call Core through [Blnk Cloud Proxy](https://docs.blnkfinance.com/cloud/refer
 
 Create **one client per Core instance**. The instance ID is fixed at `NewClient` and is not changed at runtime. Targeting another instance means constructing another client.
 
-`NewClient` copies the base URL and does not modify the `*url.URL` you passed in. After that, `client.BaseURL` is live: assigning it, calling `SetBaseURL`, or editing `.Host` / `.Path` applies on the next request. The API key is live too: updating the string you passed in, assigning `client.ApiKey`, or calling `SetAPIKey` applies on the next request. Request paths stay relative; an absolute endpoint is rejected so a path cannot send the API key to another host.
+`NewClient` and `SetBaseURL` copy the base URL. `SetAPIKey` copies the key. Later edits to those values, or to `client.BaseURL` and `client.ApiKey`, do not change later requests. Use the setters to rotate a key or fail over. This is a breaking change from older releases, which kept the URL pointer. Request paths stay relative; an absolute endpoint is rejected so a path cannot send the API key to another host. Cloud Proxy is recognized by hostname, including `:443`.
 
 ```go
 baseURL, _ := url.Parse(blnkgo.CloudProxyBaseURL) // https://api.cloud.blnkfinance.com/proxy/

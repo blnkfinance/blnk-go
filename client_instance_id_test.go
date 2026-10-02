@@ -404,10 +404,10 @@ func TestNewClient_DoesNotAliasCallerURL(t *testing.T) {
 	client.BaseURL.Host = "backup.internal"
 	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
-	require.Equal(t, "backup.internal", req.URL.Host)
+	require.Equal(t, "localhost:5001", req.URL.Host)
 }
 
-func TestClientBaseURLFieldStaysCompatible(t *testing.T) {
+func TestClientBaseURLChangesOnlyThroughSetBaseURL(t *testing.T) {
 	u, err := url.Parse("http://localhost:5001/")
 	require.NoError(t, err)
 	client := blnkgo.NewClient(u, nil)
@@ -415,31 +415,20 @@ func TestClientBaseURLFieldStaysCompatible(t *testing.T) {
 	require.Equal(t, "localhost:5001", client.BaseURL.Host)
 
 	client.BaseURL.Host = "failover.internal"
-	client.BaseURL.Path = "/core/"
 	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
-	require.Equal(t, "failover.internal", req.URL.Host)
-	require.Equal(t, "/core/ledgers", req.URL.Path)
+	require.Equal(t, "localhost:5001", req.URL.Host)
 
 	next, err := url.Parse("http://127.0.0.1:5001/")
 	require.NoError(t, err)
-	client.BaseURL = next
-	req, err = client.NewRequest("balances", http.MethodGet, nil)
-	require.NoError(t, err)
-	require.Equal(t, "127.0.0.1:5001", req.URL.Host)
-
+	client.SetBaseURL(next)
 	next.Host = "after-assign.internal"
 	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
-	require.Equal(t, "after-assign.internal", req.URL.Host)
-
-	client.BaseURL = nil
-	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
-	require.Error(t, err)
-	require.Nil(t, req)
+	require.Equal(t, "127.0.0.1:5001", req.URL.Host)
 }
 
-func TestAPIKeyFieldStaysCompatible(t *testing.T) {
+func TestAPIKeyChangesOnlyThroughSetAPIKey(t *testing.T) {
 	key := "cloud_key"
 	u, err := url.Parse("http://localhost:5001/")
 	require.NoError(t, err)
@@ -448,26 +437,38 @@ func TestAPIKeyFieldStaysCompatible(t *testing.T) {
 	key = "rotated"
 	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
-	require.Equal(t, "rotated", req.Header.Get("X-Blnk-Key"))
+	require.Equal(t, "cloud_key", req.Header.Get("X-Blnk-Key"))
 
 	*client.ApiKey = "rotated-in-place"
 	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
-	require.Equal(t, "rotated-in-place", req.Header.Get("X-Blnk-Key"))
+	require.Equal(t, "cloud_key", req.Header.Get("X-Blnk-Key"))
 
 	assigned := "assigned_key"
 	client.SetAPIKey(&assigned)
-	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
-	require.NoError(t, err)
-	require.Equal(t, "assigned_key", req.Header.Get("X-Blnk-Key"))
-
 	assigned = "assigned-again"
 	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
-	require.Equal(t, "assigned-again", req.Header.Get("X-Blnk-Key"))
+	require.Equal(t, "assigned_key", req.Header.Get("X-Blnk-Key"))
 }
 
-func TestSetBaseURL_FollowsLaterMutationOfCallerURL(t *testing.T) {
+func TestCloudProxyPort443RequiresInstanceID(t *testing.T) {
+	u, err := url.Parse("https://api.cloud.blnkfinance.com:443/proxy/")
+	require.NoError(t, err)
+	client := blnkgo.NewClient(u, nil)
+	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
+	require.Error(t, err)
+	require.Nil(t, req)
+	require.Contains(t, err.Error(), "instance_id")
+
+	client = blnkgo.NewClient(u, nil, blnkgo.WithInstanceID("instance_port"))
+	req, err = client.NewRequest("ledgers", http.MethodGet, nil)
+	require.NoError(t, err)
+	require.Equal(t, "api.cloud.blnkfinance.com:443", req.URL.Host)
+	require.Equal(t, "instance_port", req.URL.Query().Get("instance_id"))
+}
+
+func TestSetBaseURL_IgnoresLaterMutationOfCallerURL(t *testing.T) {
 	initial, err := url.Parse("http://localhost:5001/")
 	require.NoError(t, err)
 	client := blnkgo.NewClient(initial, nil)
@@ -479,7 +480,7 @@ func TestSetBaseURL_FollowsLaterMutationOfCallerURL(t *testing.T) {
 
 	req, err := client.NewRequest("ledgers", http.MethodGet, nil)
 	require.NoError(t, err)
-	require.Equal(t, "failover.internal", req.URL.Host)
+	require.Equal(t, "127.0.0.1:5001", req.URL.Host)
 	require.Equal(t, "/ledgers", req.URL.Path)
 }
 

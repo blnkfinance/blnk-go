@@ -24,18 +24,21 @@ import (
 const CloudProxyBaseURL = "https://api.cloud.blnkfinance.com/proxy/"
 
 type Client struct {
-	// ApiKey is sent as X-Blnk-Key. Requests read the current value, so
-	// *client.ApiKey = "new" and replacing the pointer both take effect on the
-	// next request. The same is true for the string variable passed to NewClient.
+	// ApiKey is the last key passed to NewClient or SetAPIKey. Requests use an
+	// internal copy. Changing this string, or the string you originally passed,
+	// does not rotate the key. Call SetAPIKey.
 	ApiKey *string
-	// BaseURL is the Core or Cloud Proxy origin. Requests read the current
-	// value, so assigning the field or changing Host/Path takes effect on the
-	// next request. NewClient stores its own copy and does not modify the URL
-	// you passed in. SetBaseURL stores the pointer you pass, matching previous
-	// SDK behavior.
+	// BaseURL is the last base URL passed to NewClient or SetBaseURL. Requests
+	// use an internal copy. Assigning this field, or editing Host or Path, does
+	// not retarget the client. Call SetBaseURL. NewClient and SetBaseURL both
+	// copy the URL, so the pointer you pass is not shared. This differs from
+	// older releases, which kept that pointer.
 	BaseURL        *url.URL
 	instanceID     string
 	mu             sync.RWMutex
+	ownedBase      *url.URL
+	apiKeyValue    string
+	apiKeySet      bool
 	options        Options
 	client         *http.Client
 	Ledger         *LedgerService
@@ -85,16 +88,17 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 	}
 
 	// Copy so NewClient does not edit the caller's URL when it adds a trailing
-	// slash. Later edits go through client.BaseURL or SetBaseURL.
+	// slash. Later base URL changes go through SetBaseURL.
 	base := cloneURL(baseURL)
 	ensureTrailingSlash(base)
+	view := cloneURL(base)
 
 	//set default options if not provided
 	client := &Client{
-		ApiKey:  apiKey,
-		BaseURL: base,
-		options: DefaultOptions(),
-		client:  &http.Client{Timeout: 10 * time.Second},
+		BaseURL:   view,
+		ownedBase: base,
+		options:   DefaultOptions(),
+		client:    &http.Client{Timeout: 10 * time.Second},
 	}
 
 	//apply options
@@ -121,33 +125,51 @@ func NewClient(baseURL *url.URL, apiKey *string, opts ...ClientOption) *Client {
 	client.Health = &HealthService{client: client}
 	client.ApiKeys = &ApiKeysService{client: client}
 	client.Hooks = &HooksService{client: client}
+	client.SetAPIKey(apiKey)
 
 	return client
 }
 
-// SetBaseURL replaces the base URL. The client keeps this pointer, so later
-// changes to it are used by the next request. This matches the previous SDK.
+// SetBaseURL replaces the base URL. The client copies it under its lock.
+// Later edits to the URL you passed in, or to client.BaseURL, do not change
+// later requests. That is a breaking change from the previous shared pointer.
 func (c *Client) SetBaseURL(baseURL *url.URL) {
+	copied := cloneURL(baseURL)
+	ensureTrailingSlash(copied)
+	view := cloneURL(copied)
 	c.mu.Lock()
-	c.BaseURL = baseURL
+	c.ownedBase = copied
+	c.BaseURL = view
 	c.mu.Unlock()
 }
 
-// SetAPIKey replaces the key sent as X-Blnk-Key. The client keeps this pointer,
-// so later changes to the string are used by the next request.
+// SetAPIKey replaces the key sent as X-Blnk-Key. The client copies the string
+// under its lock. Later edits to the caller's string do not change requests.
 func (c *Client) SetAPIKey(apiKey *string) {
+	var value string
+	set := apiKey != nil
+	if set {
+		value = *apiKey
+	}
 	c.mu.Lock()
-	c.ApiKey = apiKey
+	c.apiKeyValue = value
+	c.apiKeySet = set
+	if set {
+		published := value
+		c.ApiKey = &published
+	} else {
+		c.ApiKey = nil
+	}
 	c.mu.Unlock()
 }
 
 func (c *Client) apiKeyForRequest() (string, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	if c.ApiKey == nil {
+	if !c.apiKeySet {
 		return "", false
 	}
-	return *c.ApiKey, true
+	return c.apiKeyValue, true
 }
 
 func ensureTrailingSlash(u *url.URL) {
@@ -181,12 +203,11 @@ func (c *Client) applyInstanceID(u *url.URL) error {
 func (c *Client) snapshotBase() (*url.URL, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	if c.BaseURL == nil || c.BaseURL.String() == "" {
+	if c.ownedBase == nil || c.ownedBase.String() == "" {
 		return nil, errors.New("base url is required")
 	}
-	// Copy so URL resolution cannot edit the caller's BaseURL, while still
-	// observing Host, Path, and other edits made before this request.
-	return cloneURL(c.BaseURL), nil
+	// Copy so URL resolution cannot edit the owned base URL.
+	return cloneURL(c.ownedBase), nil
 }
 
 // resolveEndpoint joins endpoint onto BaseURL using URL resolution so a missing
@@ -242,11 +263,9 @@ func isCloudProxyURL(u *url.URL) bool {
 	if u == nil {
 		return false
 	}
-	if !strings.EqualFold(u.Host, "api.cloud.blnkfinance.com") {
-		return false
-	}
+	nameMatch := strings.EqualFold(u.Hostname(), "api.cloud.blnkfinance.com")
 	path := u.Path
-	return path == "/proxy" || strings.HasPrefix(path, "/proxy/")
+	return nameMatch && (path == "/proxy" || strings.HasPrefix(path, "/proxy/"))
 }
 
 func trimRedundantProxyPrefix(basePath, refPath string) string {
