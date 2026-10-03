@@ -16,6 +16,9 @@ The official Go SDK for Blnk - A powerful ledger system for financial applicatio
 - [2. Launching Blnk](#2-launching-blnk)
 - [3. Using the Blnk CLI](#3-using-the-blnk-cli)
 - [4. Creating Your First Ledger](#4-creating-your-first-ledger)
+  - [Retries](#retries)
+  - [Cloud Proxy](#cloud-proxy)
+  - [Updating a Ledger Name](#updating-a-ledger-name)
 - [5. Creating Balances](#5-creating-balances)
 - [6. Recording Transactions](#6-recording-transactions)
 - [7. Advanced Features](#7-advanced-features)
@@ -57,7 +60,7 @@ Install the Blnk Go SDK in your project:
 go get github.com/blnkfinance/blnk-go@v1.5.0
 ```
 
-`v1.5.0` targets **Blnk Core 0.15.4**. See [RELEASE.md](RELEASE.md) for the 78-code error catalogue (`ACC_GENERATION_FAILED` omitted) and Core 0.15.4 routing changes.
+`v1.5.0` is the latest released SDK. It targets **Blnk Core 0.15.4**. See [RELEASE.md](RELEASE.md) for the 78-code error catalogue (`ACC_GENERATION_FAILED` omitted) and Core 0.15.4 routing changes. Cloud Proxy (`WithInstanceID`) is not in `v1.5.0`; it ships in the next release.
 
 ### Step 3: Setting Up Configuration
 
@@ -183,6 +186,35 @@ Retry behavior (aligned with the TypeScript SDK):
 - **POST**, **PUT**, and **DELETE** are **not** retried (avoids duplicate money movement)
 - Request timeouts are not retried
 - Backoff delay is `RetryDelay × attempt` between retries (2s, 4s, … with default delay)
+
+### Cloud Proxy
+
+**Unreleased.** This section describes the next SDK release after `v1.5.0`. `go get github.com/blnkfinance/blnk-go@v1.5.0` does not include `WithInstanceID` or `CloudProxyBaseURL`.
+
+To call Core through [Blnk Cloud Proxy](https://docs.blnkfinance.com/cloud/reference/proxy-api), use the Cloud Proxy base URL, a Cloud API key (`X-Blnk-Key`), and `WithInstanceID`. Request bodies and Core paths stay the same. Cloud requires `instance_id` as a query parameter on every proxy request.
+
+Create **one client per Core instance**. The instance ID is fixed at `NewClient` and is not changed at runtime. Targeting another instance means constructing another client.
+
+`client.BaseURL` and `client.ApiKey` behave as in earlier v1 releases: the client keeps the pointers you pass and reads them on every request, so assigning the fields or editing the values takes effect on the next request. Those direct edits are not synchronized. If other goroutines may be sending requests, rotate a key with `SetAPIKey` and fail over with `SetBaseURL`, passing a new value each time instead of editing one the client already uses. When the new host needs a different key, call `SetBaseURLAndAPIKey` so both change together. Each request reads the host and key in one locked snapshot, so a request never pairs one host with another host's key. Request paths stay relative. An absolute endpoint is rejected: v1.5.0 never used that string to change the host, and the new resolver would. A redirect to a different host, or from `https` to `http`, is also refused, so `X-Blnk-Key` cannot follow it. Redirects that keep the same scheme and host still follow.
+
+Proxy detection is based on the base URL path: any base ending in `/proxy` (for example an enterprise Cloud deployment on its own domain) requires `WithInstanceID`, and so does the hosted `api.cloud.blnkfinance.com` origin, with or without an explicit `:443` port.
+
+```go
+baseURL, _ := url.Parse(blnkgo.CloudProxyBaseURL) // https://api.cloud.blnkfinance.com/proxy/
+cloudAPIKey := "YOUR_CLOUD_API_KEY"
+client := blnkgo.NewClient(
+    baseURL,
+    &cloudAPIKey,
+    blnkgo.WithInstanceID("instance_YOUR_INSTANCE_ID"),
+    blnkgo.WithTimeout(10*time.Second),
+)
+
+ledger, resp, err := client.Ledger.Create(blnkgo.CreateLedgerRequest{
+    Name: "My Integration Ledger",
+})
+```
+
+That sends `POST https://api.cloud.blnkfinance.com/proxy/ledgers?instance_id=instance_YOUR_INSTANCE_ID`. Use `instance_...` from instance details, not `deployment_id`. Direct Core clients can omit `WithInstanceID`.
 
 ### Updating a Ledger Name
 
