@@ -57,10 +57,10 @@ git clone https://github.com/blnkfinance/blnk && cd blnk
 Install the Blnk Go SDK in your project:
 
 ```bash
-go get github.com/blnkfinance/blnk-go@v1.5.0
+go get github.com/blnkfinance/blnk-go@v1.6.0
 ```
 
-`v1.5.0` is the latest released SDK. It targets **Blnk Core 0.15.4**. See [RELEASE.md](RELEASE.md) for the 78-code error catalogue (`ACC_GENERATION_FAILED` omitted) and Core 0.15.4 routing changes. Cloud Proxy (`WithInstanceID`) is not in `v1.5.0`; it ships in the next release.
+`v1.6.0` is the latest released SDK. It adds Cloud Proxy (`WithInstanceID`) and targets **Blnk Core 0.15.4**. See [RELEASE.md](RELEASE.md) for the Cloud Proxy notes, the 78-code error catalogue (`ACC_GENERATION_FAILED` omitted), and Core 0.15.4 routing changes.
 
 ### Step 3: Setting Up Configuration
 
@@ -189,7 +189,7 @@ Retry behavior (aligned with the TypeScript SDK):
 
 ### Cloud Proxy
 
-**Unreleased.** This section describes the next SDK release after `v1.5.0`. `go get github.com/blnkfinance/blnk-go@v1.5.0` does not include `WithInstanceID` or `CloudProxyBaseURL`.
+**v1.6.0.** `WithInstanceID` and `CloudProxyBaseURL` are part of this release. Install with `go get github.com/blnkfinance/blnk-go@v1.6.0`.
 
 To call Core through [Blnk Cloud Proxy](https://docs.blnkfinance.com/cloud/reference/proxy-api), use the Cloud Proxy base URL, a Cloud API key (`X-Blnk-Key`), and `WithInstanceID`. Request bodies and Core paths stay the same. Cloud requires `instance_id` as a query parameter on every proxy request.
 
