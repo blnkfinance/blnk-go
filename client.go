@@ -254,9 +254,10 @@ func resolveEndpoint(base *url.URL, endpoint string) (*url.URL, error) {
 	return resolved, nil
 }
 
-// refuseCrossHostRedirect stops Go from sending X-Blnk-Key to another host.
-// The default client strips Authorization and Cookie on a cross-host redirect
-// and leaves custom headers in place. Same-host redirects still follow.
+// refuseCrossHostRedirect only follows redirects that keep the same scheme and
+// host, so X-Blnk-Key never goes to another host or downgrades from https to
+// http. Go's default client strips Authorization and Cookie on a cross-host
+// redirect and leaves custom headers in place.
 func refuseCrossHostRedirect(req *http.Request, via []*http.Request) error {
 	if len(via) >= 10 {
 		return errors.New("stopped after 10 redirects")
@@ -264,7 +265,11 @@ func refuseCrossHostRedirect(req *http.Request, via []*http.Request) error {
 	if len(via) == 0 || req.URL == nil || via[len(via)-1].URL == nil {
 		return nil
 	}
-	if !strings.EqualFold(req.URL.Host, via[len(via)-1].URL.Host) {
+	prev := via[len(via)-1].URL
+	if !strings.EqualFold(req.URL.Scheme, prev.Scheme) {
+		return errors.New("refusing cross-host redirect: scheme changed")
+	}
+	if !strings.EqualFold(req.URL.Host, prev.Host) {
 		return errors.New("refusing cross-host redirect")
 	}
 	return nil
