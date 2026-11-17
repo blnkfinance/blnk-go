@@ -414,11 +414,18 @@ func distributionTotalsApproximatelyEqual(sum, amount float64) bool {
 }
 
 // ValidateUpdateStatus checks an inflight commit or void before it is sent.
-// An empty Reference is left out of the body; a whitespace-only one would be
-// sent as an idempotency key, so it is rejected.
+// An empty Reference is left out of the body. A non-empty one is an
+// idempotency key that Core compares exactly, so it must not be blank or
+// carry leading or trailing whitespace ("ref" and "ref " would be two keys).
 func ValidateUpdateStatus(u UpdateStatus) error {
-	if u.Reference != "" && strings.TrimSpace(u.Reference) == "" {
+	if u.Reference == "" {
+		return nil
+	}
+	if strings.TrimSpace(u.Reference) == "" {
 		return errors.New("validation error: reference must not be blank; omit it to skip idempotency")
+	}
+	if strings.TrimSpace(u.Reference) != u.Reference {
+		return errors.New("validation error: reference must not have leading or trailing whitespace")
 	}
 	return nil
 }

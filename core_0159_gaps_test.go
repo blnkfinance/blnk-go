@@ -396,6 +396,12 @@ func TestInflightReferenceMustNotBeBlank(t *testing.T) {
 	}
 	assert.Empty(t, last().URI, "nothing was sent")
 
+	for _, ref := range []string{" void-1", "void-1 ", "\tvoid-1\n"} {
+		_, _, err := client.Transaction.Update("txn_1", blnkgo.UpdateStatus{Status: blnkgo.InflightStatusVoid, Reference: ref})
+		assert.Error(t, err, "untrimmed reference %q", ref)
+	}
+	assert.Empty(t, last().URI, "nothing was sent")
+
 	_, _, err := client.Transaction.Update("txn_1", blnkgo.UpdateStatus{Status: blnkgo.InflightStatusVoid, Reference: "void-1"})
 	require.NoError(t, err)
 	assert.Contains(t, last().Body, `"reference":"void-1"`)
