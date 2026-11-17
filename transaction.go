@@ -441,6 +441,9 @@ func (s *TransactionService) Update(transactionID string, body UpdateStatus) (*T
 	if body.DryRun {
 		return nil, nil, errUseDryRunMethod("UpdateDryRun")
 	}
+	if err := ValidateUpdateStatus(body); err != nil {
+		return nil, nil, err
+	}
 	//if transactionId is an empty string, return an error
 	if transactionID == "" {
 		return nil, nil, fmt.Errorf("transactionID is required")
@@ -465,6 +468,9 @@ func (s *TransactionService) Update(transactionID string, body UpdateStatus) (*T
 
 // UpdateDryRun previews an inflight commit or void without settling the hold.
 func (s *TransactionService) UpdateDryRun(transactionID string, body UpdateStatus) (*TransactionPreview, *http.Response, error) {
+	if err := ValidateUpdateStatus(body); err != nil {
+		return nil, nil, err
+	}
 	if transactionID == "" {
 		return nil, nil, fmt.Errorf("transactionID is required")
 	}

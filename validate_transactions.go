@@ -39,6 +39,13 @@ func ValidateCreateTransacation(t CreateTransactionRequest) error {
 		return errors.New(sb.String())
 	}
 
+	// Core enforces an overdraft limit only when it is above zero. A negative
+	// limit fails the post as TXN_INSUFFICIENT_FUNDS, so reject it here.
+	if t.OverdraftLimit < 0 || math.IsNaN(t.OverdraftLimit) || math.IsInf(t.OverdraftLimit, 0) {
+		sb.WriteString("overdraft_limit must be a finite number of zero or more (zero means no limit)")
+		return errors.New(sb.String())
+	}
+
 	if len(t.Sources) > 0 && shouldValidateSplitLegSums(t, t.Sources) {
 		if err := validateSplitLegs(t.Sources, t, "source"); err != nil {
 			return err
@@ -404,4 +411,14 @@ func validateSplitLegsFloat(legs []Source, amount float64) error {
 
 func distributionTotalsApproximatelyEqual(sum, amount float64) bool {
 	return math.Abs(sum-amount) <= distributionSumEpsilon
+}
+
+// ValidateUpdateStatus checks an inflight commit or void before it is sent.
+// An empty Reference is left out of the body; a whitespace-only one would be
+// sent as an idempotency key, so it is rejected.
+func ValidateUpdateStatus(u UpdateStatus) error {
+	if u.Reference != "" && strings.TrimSpace(u.Reference) == "" {
+		return errors.New("validation error: reference must not be blank; omit it to skip idempotency")
+	}
+	return nil
 }

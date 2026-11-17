@@ -382,3 +382,53 @@ func TestBalanceMonitorGetReadsFractionalThreshold(t *testing.T) {
 	require.NoError(t, err, "v1.6.0 failed here with: cannot unmarshal number 100.5 into int64")
 	assert.Equal(t, 100.5, m.Condition.Threshold())
 }
+
+func TestInflightReferenceMustNotBeBlank(t *testing.T) {
+	client, last := replyServer(t, `{"transaction_id":"txn_2"}`)
+
+	for _, ref := range []string{" ", "\t", "  \n "} {
+		_, _, err := client.Transaction.Update("txn_1", blnkgo.UpdateStatus{Status: blnkgo.InflightStatusCommit, Reference: ref})
+		assert.Error(t, err, "commit with reference %q", ref)
+		_, _, err = client.Transaction.Update("txn_1", blnkgo.UpdateStatus{Status: blnkgo.InflightStatusVoid, Reference: ref})
+		assert.Error(t, err, "void with reference %q", ref)
+		_, _, err = client.Transaction.UpdateDryRun("txn_1", blnkgo.UpdateStatus{Status: blnkgo.InflightStatusCommit, Reference: ref})
+		assert.Error(t, err, "dry-run commit with reference %q", ref)
+	}
+	assert.Empty(t, last().URI, "nothing was sent")
+
+	_, _, err := client.Transaction.Update("txn_1", blnkgo.UpdateStatus{Status: blnkgo.InflightStatusVoid, Reference: "void-1"})
+	require.NoError(t, err)
+	assert.Contains(t, last().Body, `"reference":"void-1"`)
+}
+
+func TestOverdraftLimitValidation(t *testing.T) {
+	client, last := replyServer(t, `{"transaction_id":"txn_1"}`)
+	req := func(limit float64) blnkgo.CreateTransactionRequest {
+		return blnkgo.CreateTransactionRequest{
+			ParentTransaction: blnkgo.ParentTransaction{
+				Amount: 1, Precision: 100, Reference: "ref", Currency: "USD", Source: "bln_a", Destination: "bln_b",
+			},
+			AllowOverdraft: true,
+			OverdraftLimit: limit,
+		}
+	}
+
+	for _, bad := range []float64{-1, -0.01, math.NaN(), math.Inf(1)} {
+		_, _, err := client.Transaction.Create(req(bad))
+		assert.Error(t, err, "overdraft_limit %v", bad)
+	}
+	assert.Empty(t, last().URI, "nothing was sent")
+
+	_, _, err := client.Transaction.Create(req(0))
+	require.NoError(t, err)
+	assert.NotContains(t, last().Body, "overdraft_limit", "0 means no limit and is omitted")
+
+	_, _, err = client.Transaction.Create(req(500))
+	require.NoError(t, err)
+	assert.Contains(t, last().Body, `"overdraft_limit":500`)
+
+	_, _, err = client.Transaction.CreateBulk(blnkgo.CreateBulkTransactionRequest{
+		Transactions: []blnkgo.CreateTransactionRequest{req(-5)},
+	})
+	assert.Error(t, err, "bulk items are validated too")
+}
