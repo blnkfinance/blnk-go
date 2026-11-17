@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -30,7 +31,11 @@ func (s *LedgerBalanceService) GetHistorical(balanceID string, timestamp time.Ti
 	}
 	// Use RFC3339 with offset (e.g., 2025-08-30T01:38:30-03:00)
 	ts := timestamp.Format(time.RFC3339)
-	u := fmt.Sprintf("balances/%s/at?timestamp=%s", balanceID, ts)
+	u, err := endpointPath("balances/%s/at", balanceID)
+	if err != nil {
+		return nil, nil, err
+	}
+	u += "?timestamp=" + url.QueryEscape(ts)
 	if fromSource {
 		u += "&from_source=true"
 	}

@@ -23,7 +23,10 @@ func (s *MetadataService) UpdateMetadata(entityID string, body UpdateMetaDataReq
 		return nil, nil, fmt.Errorf("entity ID is required")
 	}
 
-	u := fmt.Sprintf("%s/metadata", entityID)
+	u, err := endpointPath("%s/metadata", entityID)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	req, err := s.client.NewRequest(u, http.MethodPost, body)
 	if err != nil {

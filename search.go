@@ -181,7 +181,10 @@ type StartReindexResponse struct {
 }
 
 func (s *SearchService) SearchDocument(body SearchParams, resource ResourceType) (*SearchResponse, *http.Response, error) {
-	u := fmt.Sprintf("search/%s", resource)
+	u, err := endpointPath("search/%s", string(resource))
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodPost, body)
 	if err != nil {
 		return nil, nil, err

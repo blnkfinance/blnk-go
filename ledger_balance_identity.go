@@ -21,7 +21,10 @@ func (s *LedgerBalanceService) UpdateIdentity(balanceID string, body UpdateBalan
 		return nil, nil, fmt.Errorf("invalid: identity_id is required")
 	}
 
-	u := fmt.Sprintf("balances/%s/identity", balanceID)
+	u, err := endpointPath("balances/%s/identity", balanceID)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodPut, body)
 	if err != nil {
 		return nil, nil, err

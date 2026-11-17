@@ -1,7 +1,6 @@
 package blnkgo
 
 import (
-	"fmt"
 	"net/http"
 )
 
@@ -73,7 +72,11 @@ func (s *HooksService) Update(hookID string, body UpdateHookRequest) (*HookRespo
 		return nil, nil, err
 	}
 
-	req, err := s.client.NewRequest(fmt.Sprintf("hooks/%s", hookID), http.MethodPut, body)
+	u, err := endpointPath("hooks/%s", hookID)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest(u, http.MethodPut, body)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -93,7 +96,11 @@ func (s *HooksService) Get(hookID string) (*HookResponse, *http.Response, error)
 		return nil, nil, err
 	}
 
-	req, err := s.client.NewRequest(fmt.Sprintf("hooks/%s", hookID), http.MethodGet, nil)
+	u, err := endpointPath("hooks/%s", hookID)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -143,7 +150,11 @@ func (s *HooksService) Delete(hookID string) (*DeleteHookResponse, *http.Respons
 		return nil, nil, err
 	}
 
-	req, err := s.client.NewRequest(fmt.Sprintf("hooks/%s", hookID), http.MethodDelete, nil)
+	u, err := endpointPath("hooks/%s", hookID)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest(u, http.MethodDelete, nil)
 	if err != nil {
 		return nil, nil, err
 	}

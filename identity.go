@@ -1,7 +1,6 @@
 package blnkgo
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 )
@@ -109,7 +108,10 @@ func (s *IdentityService) Create(identity Identity) (*IdentityResponse, *http.Re
 
 func (s *IdentityService) Get(identityId string) (*IdentityResponse, *http.Response, error) {
 	identityResponse := new(IdentityResponse)
-	u := fmt.Sprintf("identities/%s", identityId)
+	u, err := endpointPath("identities/%s", identityId)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {
 		return nil, nil, err
@@ -136,7 +138,10 @@ func (s *IdentityService) List() ([]*IdentityResponse, *http.Response, error) {
 
 func (s *IdentityService) Update(identityId string, identity *Identity) (*IdentityResponse, *http.Response, error) {
 	var identityResponse *IdentityResponse
-	u := fmt.Sprintf("identities/%s", identityId)
+	u, err := endpointPath("identities/%s", identityId)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodPut, identity)
 	if err != nil {
 		return nil, nil, err
@@ -169,7 +174,10 @@ func (s *IdentityService) TokenizeField(identityID string, field string) (*Token
 		return nil, nil, err
 	}
 
-	u := fmt.Sprintf("identities/%s/tokenize/%s", identityID, field)
+	u, err := endpointPath("identities/%s/tokenize/%s", identityID, field)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodPost, nil)
 	if err != nil {
 		return nil, nil, err
@@ -190,7 +198,10 @@ func (s *IdentityService) Tokenize(identityID string, body TokenizeRequest) (*To
 		return nil, nil, err
 	}
 
-	u := fmt.Sprintf("identities/%s/tokenize", identityID)
+	u, err := endpointPath("identities/%s/tokenize", identityID)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodPost, body)
 	if err != nil {
 		return nil, nil, err
@@ -211,7 +222,10 @@ func (s *IdentityService) GetTokenizedFields(identityID string) (*GetTokenizedFi
 		return nil, nil, err
 	}
 
-	u := fmt.Sprintf("identities/%s/tokenized-fields", identityID)
+	u, err := endpointPath("identities/%s/tokenized-fields", identityID)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {
 		return nil, nil, err
@@ -232,7 +246,10 @@ func (s *IdentityService) DetokenizeField(identityID string, field string) (*Det
 		return nil, nil, err
 	}
 
-	u := fmt.Sprintf("identities/%s/detokenize/%s", identityID, field)
+	u, err := endpointPath("identities/%s/detokenize/%s", identityID, field)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {
 		return nil, nil, err
@@ -253,7 +270,10 @@ func (s *IdentityService) Detokenize(identityID string, body DetokenizeRequest) 
 		return nil, nil, err
 	}
 
-	u := fmt.Sprintf("identities/%s/detokenize", identityID)
+	u, err := endpointPath("identities/%s/detokenize", identityID)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodPost, body)
 	if err != nil {
 		return nil, nil, err
@@ -274,7 +294,11 @@ func (s *IdentityService) Delete(identityID string) (*DeleteIdentityResponse, *h
 		return nil, nil, err
 	}
 
-	req, err := s.client.NewRequest(fmt.Sprintf("identities/%s", identityID), http.MethodDelete, nil)
+	u, err := endpointPath("identities/%s", identityID)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest(u, http.MethodDelete, nil)
 	if err != nil {
 		return nil, nil, err
 	}

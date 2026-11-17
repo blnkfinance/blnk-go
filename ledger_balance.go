@@ -104,7 +104,10 @@ func (s *LedgerBalanceService) Get(balanceID string, opts ...*GetBalanceRequest)
 	if len(opts) > 1 {
 		return nil, nil, fmt.Errorf("Get accepts at most one optional request")
 	}
-	u := fmt.Sprintf("balances/%s", balanceID)
+	u, err := endpointPath("balances/%s", balanceID)
+	if err != nil {
+		return nil, nil, err
+	}
 	if len(opts) > 0 && opts[0] != nil {
 		var params []string
 		if opts[0].FromSource {
@@ -136,7 +139,10 @@ func (s *LedgerBalanceService) GetByIndicator(indicator string, currency string)
 	if currency == "" {
 		return nil, nil, fmt.Errorf("currency is required")
 	}
-	u := fmt.Sprintf("balances/indicator/%s/currency/%s", indicator, currency)
+	u, err := endpointPath("balances/indicator/%s/currency/%s", indicator, currency)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {
 		return nil, nil, err

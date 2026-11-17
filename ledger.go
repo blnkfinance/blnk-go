@@ -41,7 +41,10 @@ func (s *LedgerService) Get(id string) (*Ledger, *http.Response, error) {
 	if id == "" {
 		return nil, nil, fmt.Errorf("invalid: id is required")
 	}
-	u := fmt.Sprintf("ledgers/%s", id)
+	u, err := endpointPath("ledgers/%s", id)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {
 		return nil, nil, err
@@ -78,7 +81,10 @@ func (s *LedgerService) Update(id string, body UpdateLedgerRequest) (*Ledger, *h
 	if body.Name == "" {
 		return nil, nil, fmt.Errorf("invalid: name is required")
 	}
-	u := fmt.Sprintf("ledgers/%s", id)
+	u, err := endpointPath("ledgers/%s", id)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodPut, body)
 	if err != nil {
 		return nil, nil, err

@@ -1,7 +1,6 @@
 package blnkgo
 
 import (
-	"fmt"
 	"net/http"
 )
 
@@ -50,7 +49,11 @@ func (s *BalanceMonitorService) Create(data MonitorData) (*MonitorDataResp, *htt
 }
 
 func (s *BalanceMonitorService) Get(monitorID string) (*MonitorDataResp, *http.Response, error) {
-	req, err := s.client.NewRequest("balance-monitors/"+monitorID, http.MethodGet, nil)
+	u, err := endpointPath("balance-monitors/%s", monitorID)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -86,7 +89,10 @@ func (s *BalanceMonitorService) ListByBalanceID(balanceID string) ([]MonitorData
 		return nil, nil, err
 	}
 
-	u := fmt.Sprintf("balance-monitors/balances/%s", balanceID)
+	u, err := endpointPath("balance-monitors/balances/%s", balanceID)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {
 		return nil, nil, err
@@ -102,7 +108,11 @@ func (s *BalanceMonitorService) ListByBalanceID(balanceID string) ([]MonitorData
 }
 
 func (s *BalanceMonitorService) Update(monitorID string, data MonitorData) (*MonitorDataResp, *http.Response, error) {
-	req, err := s.client.NewRequest("balance-monitors/"+monitorID, http.MethodPut, data)
+	u, err := endpointPath("balance-monitors/%s", monitorID)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest(u, http.MethodPut, data)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -122,7 +132,11 @@ func (s *BalanceMonitorService) Delete(monitorID string) (*DeleteBalanceMonitorR
 		return nil, nil, err
 	}
 
-	req, err := s.client.NewRequest(fmt.Sprintf("balance-monitors/%s", monitorID), http.MethodDelete, nil)
+	u, err := endpointPath("balance-monitors/%s", monitorID)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest(u, http.MethodDelete, nil)
 	if err != nil {
 		return nil, nil, err
 	}

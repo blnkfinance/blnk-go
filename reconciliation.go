@@ -113,7 +113,11 @@ func (s *ReconciliationService) UpdateMatchingRule(ruleID string, matcher Matche
 		return nil, nil, fmt.Errorf("matching rule id is required")
 	}
 
-	req, err := s.client.NewRequest(fmt.Sprintf("reconciliation/matching-rules/%s", ruleID), http.MethodPut, matcher)
+	u, err := endpointPath("reconciliation/matching-rules/%s", ruleID)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest(u, http.MethodPut, matcher)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -132,7 +136,11 @@ func (s *ReconciliationService) DeleteMatchingRule(ruleID string) (*DeleteMatchi
 		return nil, nil, fmt.Errorf("matching rule id is required")
 	}
 
-	req, err := s.client.NewRequest(fmt.Sprintf("reconciliation/matching-rules/%s", ruleID), http.MethodDelete, nil)
+	u, err := endpointPath("reconciliation/matching-rules/%s", ruleID)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest(u, http.MethodDelete, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -170,7 +178,11 @@ func (s *ReconciliationService) Get(reconciliationID string) (*Reconciliation, *
 		return nil, nil, fmt.Errorf("reconciliation id is required")
 	}
 
-	req, err := s.client.NewRequest(fmt.Sprintf("reconciliation/%s", reconciliationID), http.MethodGet, nil)
+	u, err := endpointPath("reconciliation/%s", reconciliationID)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {
 		return nil, nil, err
 	}

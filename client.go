@@ -237,6 +237,12 @@ func resolveEndpoint(base *url.URL, endpoint string) (*url.URL, error) {
 	if ref.IsAbs() || ref.Scheme != "" || ref.Host != "" || ref.User != nil || ref.Opaque != "" {
 		return nil, errors.New("endpoint must be a relative path")
 	}
+	// ref.Path is percent-decoded, so this also catches "%2e%2e". Those
+	// survive ResolveReference in RawPath and a server or proxy that decodes
+	// and cleans the path would otherwise land outside the base.
+	if hasDotSegment(ref.Path) {
+		return nil, errors.New("endpoint escapes the configured base URL")
+	}
 	if !strings.HasSuffix(base.Path, "/") {
 		base.Path += "/"
 	}
@@ -248,7 +254,7 @@ func resolveEndpoint(base *url.URL, endpoint string) (*url.URL, error) {
 	if resolved.Scheme != base.Scheme || resolved.Host != base.Host {
 		return nil, errors.New("endpoint must be a relative path")
 	}
-	if !staysWithinBase(base.Path, resolved.Path) {
+	if hasDotSegment(resolved.Path) || !staysWithinBase(base.Path, resolved.Path) {
 		return nil, errors.New("endpoint escapes the configured base URL")
 	}
 	return resolved, nil
