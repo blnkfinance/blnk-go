@@ -420,7 +420,10 @@ func (s *TransactionService) Update(transactionID string, body UpdateStatus) (*T
 	if transactionID == "" {
 		return nil, nil, fmt.Errorf("transactionID is required")
 	}
-	u := fmt.Sprintf("transactions/inflight/%s", transactionID)
+	u, err := endpointPath("transactions/inflight/%s", transactionID)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodPut, body)
 	if err != nil {
 		return nil, nil, err
@@ -442,7 +445,10 @@ func (s *TransactionService) UpdateDryRun(transactionID string, body UpdateStatu
 	}
 	body.DryRun = true
 
-	u := fmt.Sprintf("transactions/inflight/%s", transactionID)
+	u, err := endpointPath("transactions/inflight/%s", transactionID)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodPut, body)
 	if err != nil {
 		return nil, nil, err
@@ -476,7 +482,10 @@ func (s *TransactionService) Refund(transactionID string, body ...*RefundTransac
 		reqBody = body[0]
 	}
 
-	u := fmt.Sprintf("refund-transaction/%s", transactionID)
+	u, err := endpointPath("refund-transaction/%s", transactionID)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodPost, reqBody)
 	if err != nil {
 		return nil, nil, err
@@ -510,7 +519,10 @@ func (s *TransactionService) RefundDryRun(transactionID string, body ...*RefundT
 		reqBody = &copied
 	}
 
-	u := fmt.Sprintf("refund-transaction/%s", transactionID)
+	u, err := endpointPath("refund-transaction/%s", transactionID)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodPost, reqBody)
 	if err != nil {
 		return nil, nil, err
@@ -530,7 +542,10 @@ func (s *TransactionService) Get(transactionID string) (*Transaction, *http.Resp
 		return nil, nil, fmt.Errorf("transactionID is required")
 	}
 
-	u := fmt.Sprintf("transactions/%s", transactionID)
+	u, err := endpointPath("transactions/%s", transactionID)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {
 		return nil, nil, err
@@ -545,11 +560,22 @@ func (s *TransactionService) Get(transactionID string) (*Transaction, *http.Resp
 	return transaction, resp, nil
 }
 
+// GetByReference fetches a transaction by its reference. References are
+// free-form, so "/", "%", spaces and Unicode are percent-escaped rather than
+// rejected. A reference that is "." or "..", or whose "/"-separated parts
+// include "." or ".." (for example "a/../b"), returns an error without
+// sending a request, because a server or proxy that decodes %2F would read it
+// as a dot segment.
 func (s *TransactionService) GetByReference(reference string) (*Transaction, *http.Response, error) {
 	if reference == "" {
 		return nil, nil, fmt.Errorf("reference is required")
 	}
 
+	// References are free-form, so "/" and "%" are escaped rather than
+	// rejected. Dot segments still are, since escaping leaves them as-is.
+	if reference == "." || reference == ".." {
+		return nil, nil, fmt.Errorf("invalid reference %q", reference)
+	}
 	u := fmt.Sprintf("transactions/reference/%s", url.PathEscape(reference))
 	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {

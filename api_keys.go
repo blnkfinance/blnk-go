@@ -1,7 +1,6 @@
 package blnkgo
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -92,7 +91,10 @@ func (s *ApiKeysService) Delete(apiKeyID string, options *DeleteApiKeysOptions) 
 		return nil, err
 	}
 
-	endpoint := fmt.Sprintf("api-keys/%s", apiKeyID)
+	endpoint, err := endpointPath("api-keys/%s", apiKeyID)
+	if err != nil {
+		return nil, err
+	}
 	if options != nil && options.Owner != "" {
 		endpoint += "?owner=" + url.QueryEscape(options.Owner)
 	}

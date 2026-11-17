@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -16,7 +17,7 @@ func TestLedgerBalanceService_GetHistorical_Success(t *testing.T) {
 	mockClient, svc := setupLedgerBalanceService()
 	balanceID := "bal-123"
 	timestamp := time.Date(2023, 8, 29, 12, 0, 0, 0, time.FixedZone("-03:00", -3*60*60))
-	endpoint := fmt.Sprintf("balances/%s/at?timestamp=%s", balanceID, timestamp.Format(time.RFC3339))
+	endpoint := fmt.Sprintf("balances/%s/at?timestamp=%s", balanceID, url.QueryEscape(timestamp.Format(time.RFC3339)))
 	mockClient.On("NewRequest", endpoint, http.MethodGet, nil).Return(&http.Request{}, nil)
 	mockClient.On("CallWithRetry", mock.Anything, mock.Anything).Return(&http.Response{}, nil).Run(func(args mock.Arguments) {
 		respData := args.Get(1).(*blnkgo.LedgerBalanceHistorical)

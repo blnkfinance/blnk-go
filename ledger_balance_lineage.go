@@ -111,7 +111,10 @@ func (s *LedgerBalanceService) GetLineage(balanceID string) (*BalanceLineage, *h
 		return nil, nil, fmt.Errorf("invalid: balanceID is required")
 	}
 
-	u := fmt.Sprintf("balances/%s/lineage", balanceID)
+	u, err := endpointPath("balances/%s/lineage", balanceID)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {
 		return nil, nil, err

@@ -40,7 +40,10 @@ func (s *TransactionService) GetLineage(transactionID string) (*TransactionLinea
 		return nil, nil, fmt.Errorf("transactionID is required")
 	}
 
-	u := fmt.Sprintf("transactions/%s/lineage", transactionID)
+	u, err := endpointPath("transactions/%s/lineage", transactionID)
+	if err != nil {
+		return nil, nil, err
+	}
 	req, err := s.client.NewRequest(u, http.MethodGet, nil)
 	if err != nil {
 		return nil, nil, err

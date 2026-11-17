@@ -1,5 +1,17 @@
 # Release Notes
 
+## Unreleased
+
+### Security: resource IDs in request paths
+
+Methods that put a caller-supplied value into the URL path now validate and escape it. Before, an app that passed a user-controlled ID into the SDK could have its `X-Blnk-Key` sent to a different Core route, for example `Transaction.Refund("../search/reindex")` sent `POST /search/reindex`. On a Cloud Proxy base, `%2e%2e` got past the `/proxy/` check.
+
+- **Stricter IDs.** IDs, balance indicators and currencies, tokenize field names, the search resource and the metadata entity ID now return an error, without sending a request, when the value is empty, `.` or `..`, or contains `/`, `\`, `?`, `#`, `%` or a control character. Other characters, including spaces and Unicode, are percent-escaped. Blnk IDs (`ldg_…`, `txn_…`, `idt_…`) and indicators such as `@World` are unaffected.
+- **Empty IDs.** An empty ID now returns an error in every method. Before, some methods sent the request to the collection path instead (for example `identities/`).
+- **`GetByReference`.** References are still free-form: `/`, `%`, spaces and Unicode are escaped. A reference that is `.` or `..`, or whose `/`-separated parts include `.` or `..` (for example `a/../b`), now returns an error.
+- **`NewRequest`.** Endpoints containing a `.` or `..` segment, including percent-encoded forms such as `%2e%2e`, return an `escapes the configured base URL` error.
+- **`GetHistorical`.** The timestamp is now query-escaped, so a positive offset such as `+02:00` reaches Core intact instead of being decoded as a space.
+
 ## v1.6.0
 
 v1.6.0 stays on the v1 line. `client.BaseURL` and `client.ApiKey` keep their existing pointer behavior.
