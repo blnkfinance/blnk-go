@@ -560,6 +560,12 @@ func (s *TransactionService) Get(transactionID string) (*Transaction, *http.Resp
 	return transaction, resp, nil
 }
 
+// GetByReference fetches a transaction by its reference. References are
+// free-form, so "/", "%", spaces and Unicode are percent-escaped rather than
+// rejected. A reference that is "." or "..", or whose "/"-separated parts
+// include "." or ".." (for example "a/../b"), returns an error without
+// sending a request, because a server or proxy that decodes %2F would read it
+// as a dot segment.
 func (s *TransactionService) GetByReference(reference string) (*Transaction, *http.Response, error) {
 	if reference == "" {
 		return nil, nil, fmt.Errorf("reference is required")

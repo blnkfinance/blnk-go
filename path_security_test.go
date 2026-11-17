@@ -158,6 +158,8 @@ var hostileSegments = []string{
 	"../api-keys/api_key_victim",
 	"%2e%2e/%2e%2e/secret",
 	"%2E%2E",
+	"%252e%252e",
+	"%252e%252e%252fbackup",
 	"..%2Fbackup",
 	"ldg_1/../../backup",
 	"ldg_1?limit=1",
@@ -167,9 +169,10 @@ var hostileSegments = []string{
 }
 
 // No hostile ID may produce a request: the SDK must refuse before sending the
-// API key anywhere.
+// API key anywhere. Covers a root base, the Cloud Proxy mount and a Core
+// served under a path prefix.
 func TestPathSegments_HostileIDsNeverReachTheServer(t *testing.T) {
-	for _, basePath := range []string{"/", "/proxy/"} {
+	for _, basePath := range []string{"/", "/proxy/", "/blnk/core/"} {
 		var opts []blnkgo.ClientOption
 		if basePath == "/proxy/" {
 			opts = append(opts, blnkgo.WithInstanceID("instance_test"))
@@ -228,18 +231,44 @@ func TestPathSegments_ValidIDsAreSentEscaped(t *testing.T) {
 	}, seen())
 }
 
-// References are free-form: "/" and "%" are escaped, dot segments rejected.
+// Valid IDs keep working under a path-prefixed base, and Unicode is escaped
+// as UTF-8 rather than rejected.
+func TestPathSegments_PrefixedBaseAndUnicode(t *testing.T) {
+	client, seen := recordingServer(t, "/blnk/core/")
+
+	_, _, err := client.Ledger.Get("ldg_123")
+	require.NoError(t, err)
+	_, _, err = client.Identity.Get("idt_ñ✓")
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{
+		"GET /blnk/core/ledgers/ldg_123",
+		"GET /blnk/core/identities/idt_%C3%B1%E2%9C%93",
+	}, seen())
+}
+
+// References are free-form: "/", "%", spaces and Unicode are escaped and
+// sent. A reference whose "/"-separated parts include "." or ".." (for
+// example "a/../b") is rejected on purpose: once a server or proxy decodes
+// %2F it would read as a dot segment.
 func TestGetByReference_EscapesButRejectsDotSegments(t *testing.T) {
 	client, seen := recordingServer(t, "/")
 
-	_, _, err := client.Transaction.GetByReference("order/2025/%41")
-	require.NoError(t, err)
-	_, _, err = client.Transaction.GetByReference("..")
-	assert.Error(t, err)
-	_, _, err = client.Transaction.GetByReference(".")
-	assert.Error(t, err)
+	for _, ref := range []string{"order/2025/%41", "ref with space", "réf_✓", "%2e%2e"} {
+		_, _, err := client.Transaction.GetByReference(ref)
+		require.NoErrorf(t, err, "reference %q", ref)
+	}
+	for _, ref := range []string{"..", ".", "a/../b", "a/./b", "../backup"} {
+		_, _, err := client.Transaction.GetByReference(ref)
+		assert.Errorf(t, err, "reference %q", ref)
+	}
 
-	assert.Equal(t, []string{"GET /transactions/reference/order%2F2025%2F%2541"}, seen())
+	assert.Equal(t, []string{
+		"GET /transactions/reference/order%2F2025%2F%2541",
+		"GET /transactions/reference/ref%20with%20space",
+		"GET /transactions/reference/r%C3%A9f_%E2%9C%93",
+		"GET /transactions/reference/%252e%252e",
+	}, seen())
 }
 
 // Percent-encoded dot segments passed straight to NewRequest are refused,
