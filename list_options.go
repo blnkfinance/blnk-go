@@ -3,8 +3,8 @@ package blnkgo
 import "fmt"
 
 // ListOptions pages a GET list endpoint through ListWithOptions (ledgers,
-// balances, transactions, identities). A zero Limit or Offset is left out of
-// the query, so Core's default page applies.
+// balances, transactions). A zero Limit or Offset is left out of the query, so
+// Core's default page applies.
 type ListOptions struct {
 	Limit  int `url:"limit,omitempty"`
 	Offset int `url:"offset,omitempty"`

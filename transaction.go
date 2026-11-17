@@ -63,11 +63,16 @@ type Transaction struct {
 	// not applied it yet.
 	Queued bool `json:"queued,omitempty"`
 	// Hash is the transaction's hash-chain digest (Core 0.15.0+).
-	Hash               string     `json:"hash,omitempty"`
-	AmountString       string     `json:"amount_string,omitempty"`
-	Inflight           bool       `json:"inflight,omitempty"`
-	AllowOverdraft     bool       `json:"allow_overdraft,omitempty"`
-	OverdraftLimit     float64    `json:"overdraft_limit,omitempty"`
+	Hash     string `json:"hash,omitempty"`
+	Inflight bool   `json:"inflight,omitempty"`
+	// AmountString, AllowOverdraft and OverdraftLimit are echoed on the
+	// create response only. Core does not store them as columns, so
+	// Get and List return them empty (allow_overdraft is kept in MetaData).
+	AmountString   string  `json:"amount_string,omitempty"`
+	AllowOverdraft bool    `json:"allow_overdraft,omitempty"`
+	OverdraftLimit float64 `json:"overdraft_limit,omitempty"`
+	// Core sends the zero time (0001-01-01T00:00:00Z) for a date that was
+	// never set; check IsZero.
 	ScheduledFor       *time.Time `json:"scheduled_for,omitempty"`
 	InflightExpiryDate *time.Time `json:"inflight_expiry_date,omitempty"`
 	InflightCommitDate *time.Time `json:"inflight_commit_date,omitempty"`

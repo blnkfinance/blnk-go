@@ -78,10 +78,6 @@ func TestListWithOptionsSendsPagination(t *testing.T) {
 			func() error { _, _, err := client.Transaction.List(); return err },
 			func(o *blnkgo.ListOptions) error { _, _, err := client.Transaction.ListWithOptions(o); return err },
 		},
-		"/identities": {
-			func() error { _, _, err := client.Identity.List(); return err },
-			func(o *blnkgo.ListOptions) error { _, _, err := client.Identity.ListWithOptions(o); return err },
-		},
 	}
 	for path, fns := range calls {
 		t.Run(path, func(t *testing.T) {
@@ -310,4 +306,22 @@ func TestInflightReferenceConflictSurfacesErrorCode(t *testing.T) {
 	require.True(t, ok, "error should be an *ApiErrorResponse")
 	require.NotNil(t, apiErr.ErrorDetail)
 	assert.Equal(t, blnkgo.ErrorCodeTxnDuplicateReference, apiErr.ErrorDetail.Code)
+}
+
+// FromSource keeps its v1.6.0 wire format: GetBalanceRequest.FromSource
+// sends from_source=true, alone or alongside the new Include.
+func TestGetBalanceFromSourceStillSent(t *testing.T) {
+	client, last := replyServer(t, `{"balance_id":"bln_1"}`)
+
+	_, _, err := client.LedgerBalance.Get("bln_1", &blnkgo.GetBalanceRequest{FromSource: true})
+	require.NoError(t, err)
+	assert.Equal(t, "/balances/bln_1?from_source=true", last().URI)
+
+	_, _, err = client.LedgerBalance.Get("bln_1", &blnkgo.GetBalanceRequest{
+		FromSource: true,
+		WithQueued: true,
+		Include:    []blnkgo.BalanceInclude{blnkgo.BalanceIncludeLedger},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "/balances/bln_1?from_source=true&with_queued=true&include=ledger", last().URI)
 }

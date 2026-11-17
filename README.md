@@ -249,7 +249,7 @@ fmt.Printf("Ledgers: %+v\n", ledgers)
 fmt.Printf("Status Code: %d\n", resp.StatusCode)
 ```
 
-To page through results, use `ListWithOptions`. `Ledger`, `LedgerBalance`, `Transaction` and `Identity` all have it:
+To page through results, use `ListWithOptions`. `Ledger`, `LedgerBalance` and `Transaction` have it. Core 0.15.9 ignores `limit` and `offset` on `GET /identities`, so page identities with `Identity.Filter` instead:
 
 ```go
 page2, resp, err := client.Ledger.ListWithOptions(&blnkgo.ListOptions{Limit: 50, Offset: 50})

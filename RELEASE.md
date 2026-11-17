@@ -5,7 +5,7 @@
 ### Blnk Core 0.15.9 alignment
 
 - **Fix: `Metadata.UpdateMetadata` returned empty metadata.** The response is now read from `meta_data`, the key Core sends.
-- **Pagination.** New `ListWithOptions(*ListOptions{Limit, Offset})` on `Ledger`, `LedgerBalance`, `Transaction` and `Identity`. `List()` keeps its v1.6.0 signature, so interfaces and method values that use it still match.
+- **Pagination.** New `ListWithOptions(*ListOptions{Limit, Offset})` on `Ledger`, `LedgerBalance` and `Transaction`. `List()` keeps its v1.6.0 signature, so interfaces and method values that use it still match. Identities have no `ListWithOptions`, because Core 0.15.9 ignores `limit` and `offset` on `GET /identities`. Use `Identity.Filter` to page them.
 - **Balance monitor trigger (Core 0.15.7+).** `MonitorData.Trigger` takes `MonitorTriggerEdge` (Core's default) or `MonitorTriggerLevel`. Responses include `ConditionState` and `Condition.PreciseValue`.
 - **`BalanceMonitor.UpdatePartial` (Core 0.15.9+).** It sends only the fields set on `UpdateMonitorRequest`, so a threshold can be moved to 0 and a description cleared on purpose. It returns Core's message and `PrecisionUnchanged`. `BalanceMonitor.Update` is deprecated: Core never returned the monitor from it, so its result was always empty.
 - **Idempotent commit and void (Core 0.15.7+).** `UpdateStatus.Reference` makes a commit or void idempotent by reference.
@@ -13,7 +13,7 @@
 - **More transaction response fields.** `Transaction` now decodes `Hash`, `AmountString`, `Inflight`, `AllowOverdraft`, `OverdraftLimit`, `ScheduledFor`, `InflightExpiryDate` and `InflightCommitDate`.
 - **`GetBalanceRequest.Include`** embeds the identity and ledger (`BalanceIncludeIdentity`, `BalanceIncludeLedger`) in `LedgerBalance.Identity` and `LedgerBalance.Ledger`.
 - **`FilterParams.LogicalOperator`** joins filters with `LogicalAnd` or `LogicalOr`.
-- **Deprecated, still present:** `ParentTransaction.Rate`, `Source.Narration` and `LedgerBalance.CurrencyMultiplier`, which Core no longer has, and `GetBalanceRequest.FromSource`, which `GET /balances/{id}` ignores (use `GetHistorical`).
+- **Deprecated, still present:** `ParentTransaction.Rate`, `Source.Narration` and `LedgerBalance.CurrencyMultiplier`, which Core no longer has.
 
 ### Security: resource IDs in request paths
 

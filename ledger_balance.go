@@ -65,8 +65,7 @@ const (
 
 // GetBalanceRequest holds optional query parameters for LedgerBalance.Get.
 type GetBalanceRequest struct {
-	// Deprecated: GET /balances/{id} ignores from_source. Use GetHistorical,
-	// which supports it on GET /balances/{id}/at.
+	// FromSource reconstructs the balance from transactions instead of snapshots.
 	FromSource bool `json:"from_source,omitempty"`
 	// Include embeds related records in the response, filling
 	// LedgerBalance.Identity and LedgerBalance.Ledger.
