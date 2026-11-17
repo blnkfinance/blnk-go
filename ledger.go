@@ -24,9 +24,15 @@ type UpdateLedgerRequest struct {
 	Name string `json:"name"`
 }
 
-// List returns ledgers via GET /ledgers. Pass ListOptions to page through
-// results; without it Core returns its default page (limit=10, offset=0).
-func (s *LedgerService) List(opts ...*ListOptions) ([]Ledger, *http.Response, error) {
+// List returns ledgers via GET /ledgers, using Core's default page
+// (limit=10, offset=0). Use ListWithOptions to page through results.
+func (s *LedgerService) List() ([]Ledger, *http.Response, error) {
+	return s.ListWithOptions(nil)
+}
+
+// ListWithOptions returns ledgers via GET /ledgers with optional
+// pagination. A nil opts, or zero Limit and Offset, uses Core's default page.
+func (s *LedgerService) ListWithOptions(opts *ListOptions) ([]Ledger, *http.Response, error) {
 	q, err := listQuery(opts)
 	if err != nil {
 		return nil, nil, err

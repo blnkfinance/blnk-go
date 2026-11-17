@@ -5,7 +5,7 @@
 ### Blnk Core 0.15.9 alignment
 
 - **Fix: `Metadata.UpdateMetadata` returned empty metadata.** The response is now read from `meta_data`, the key Core sends.
-- **Pagination.** `Ledger.List`, `LedgerBalance.List`, `Transaction.List` and `Identity.List` accept an optional `*ListOptions{Limit, Offset}`. Calls with no arguments are unchanged.
+- **Pagination.** New `ListWithOptions(*ListOptions{Limit, Offset})` on `Ledger`, `LedgerBalance`, `Transaction` and `Identity`. `List()` keeps its v1.6.0 signature, so interfaces and method values that use it still match.
 - **Balance monitor trigger (Core 0.15.7+).** `MonitorData.Trigger` takes `MonitorTriggerEdge` (Core's default) or `MonitorTriggerLevel`. Responses include `ConditionState` and `Condition.PreciseValue`.
 - **`BalanceMonitor.UpdatePartial` (Core 0.15.9+).** It sends only the fields set on `UpdateMonitorRequest`, so a threshold can be moved to 0 and a description cleared on purpose. It returns Core's message and `PrecisionUnchanged`. `BalanceMonitor.Update` is deprecated: Core never returned the monitor from it, so its result was always empty.
 - **Idempotent commit and void (Core 0.15.7+).** `UpdateStatus.Reference` makes a commit or void idempotent by reference.

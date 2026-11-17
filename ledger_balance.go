@@ -95,10 +95,15 @@ func (s *LedgerBalanceService) Create(body CreateLedgerBalanceRequest) (*LedgerB
 	return ledgerBalance, resp, nil
 }
 
-// List returns balances via GET /balances.
-// Pass ListOptions to page through results; without it Core returns its
-// default page (limit=10, offset=0).
-func (s *LedgerBalanceService) List(opts ...*ListOptions) ([]LedgerBalance, *http.Response, error) {
+// List returns balances via GET /balances, using Core's default page
+// (limit=10, offset=0). Use ListWithOptions to page through results.
+func (s *LedgerBalanceService) List() ([]LedgerBalance, *http.Response, error) {
+	return s.ListWithOptions(nil)
+}
+
+// ListWithOptions returns balances via GET /balances with optional
+// pagination. A nil opts, or zero Limit and Offset, uses Core's default page.
+func (s *LedgerBalanceService) ListWithOptions(opts *ListOptions) ([]LedgerBalance, *http.Response, error) {
 	q, err := listQuery(opts)
 	if err != nil {
 		return nil, nil, err

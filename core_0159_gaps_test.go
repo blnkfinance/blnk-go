@@ -58,30 +58,47 @@ func TestUpdateMetadataDecodesCoreResponseKey(t *testing.T) {
 	assert.EqualValues(t, 5, got.MetaData["limit"])
 }
 
-func TestListMethodsSendPagination(t *testing.T) {
+func TestListWithOptionsSendsPagination(t *testing.T) {
 	client, last := replyServer(t, `[]`)
-	opts := &blnkgo.ListOptions{Limit: 50, Offset: 100}
 
-	calls := map[string]func(...*blnkgo.ListOptions) error{
-		"/ledgers":      func(o ...*blnkgo.ListOptions) error { _, _, err := client.Ledger.List(o...); return err },
-		"/balances":     func(o ...*blnkgo.ListOptions) error { _, _, err := client.LedgerBalance.List(o...); return err },
-		"/transactions": func(o ...*blnkgo.ListOptions) error { _, _, err := client.Transaction.List(o...); return err },
-		"/identities":   func(o ...*blnkgo.ListOptions) error { _, _, err := client.Identity.List(o...); return err },
+	type listFns struct {
+		list        func() error
+		withOptions func(*blnkgo.ListOptions) error
 	}
-	for path, call := range calls {
+	calls := map[string]listFns{
+		"/ledgers": {
+			func() error { _, _, err := client.Ledger.List(); return err },
+			func(o *blnkgo.ListOptions) error { _, _, err := client.Ledger.ListWithOptions(o); return err },
+		},
+		"/balances": {
+			func() error { _, _, err := client.LedgerBalance.List(); return err },
+			func(o *blnkgo.ListOptions) error { _, _, err := client.LedgerBalance.ListWithOptions(o); return err },
+		},
+		"/transactions": {
+			func() error { _, _, err := client.Transaction.List(); return err },
+			func(o *blnkgo.ListOptions) error { _, _, err := client.Transaction.ListWithOptions(o); return err },
+		},
+		"/identities": {
+			func() error { _, _, err := client.Identity.List(); return err },
+			func(o *blnkgo.ListOptions) error { _, _, err := client.Identity.ListWithOptions(o); return err },
+		},
+	}
+	for path, fns := range calls {
 		t.Run(path, func(t *testing.T) {
-			require.NoError(t, call())
-			assert.Equal(t, path, last().URI, "no options sends no query")
+			require.NoError(t, fns.list())
+			assert.Equal(t, path, last().URI, "List sends no query")
 
-			require.NoError(t, call(opts))
+			require.NoError(t, fns.withOptions(nil))
+			assert.Equal(t, path, last().URI, "nil options send no query")
+
+			require.NoError(t, fns.withOptions(&blnkgo.ListOptions{Limit: 50, Offset: 100}))
 			assert.Equal(t, path+"?limit=50&offset=100", last().URI)
 
-			require.NoError(t, call(&blnkgo.ListOptions{Limit: 5}))
+			require.NoError(t, fns.withOptions(&blnkgo.ListOptions{Limit: 5}))
 			assert.Equal(t, path+"?limit=5", last().URI)
 
-			assert.Error(t, call(&blnkgo.ListOptions{Limit: -1}))
-			assert.Error(t, call(&blnkgo.ListOptions{Offset: -1}))
-			assert.Error(t, call(opts, opts))
+			assert.Error(t, fns.withOptions(&blnkgo.ListOptions{Limit: -1}))
+			assert.Error(t, fns.withOptions(&blnkgo.ListOptions{Offset: -1}))
 		})
 	}
 }
@@ -264,4 +281,33 @@ func TestFilterSendsLogicalOperator(t *testing.T) {
 	_, _, err = client.Transaction.Filter(blnkgo.FilterParams{Filters: []blnkgo.Filter{{Field: "status", Operator: blnkgo.OpEqual, Value: "APPLIED"}}})
 	require.NoError(t, err)
 	assert.NotContains(t, last().Body, "logical_operator")
+}
+
+// Core 0.15.7 answers a reused commit/void reference with a different amount
+// or action with 409 TXN_DUPLICATE_REFERENCE (api/inflight_reference_test.go).
+func TestInflightReferenceConflictSurfacesErrorCode(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		_, _ = w.Write([]byte(`{"error":"reference settle_1 already used","error_detail":{"code":"TXN_DUPLICATE_REFERENCE","message":"reference settle_1 already used"}}`))
+	}))
+	t.Cleanup(srv.Close)
+	u, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+	apiKey := "test_key"
+	client := blnkgo.NewClient(u, &apiKey, blnkgo.WithRetry(0))
+
+	_, resp, err := client.Transaction.Update("txn_1", blnkgo.UpdateStatus{
+		Status:    blnkgo.InflightStatusCommit,
+		Amount:    10,
+		Reference: "settle_1",
+	})
+	require.Error(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, http.StatusConflict, resp.StatusCode)
+
+	apiErr, ok := blnkgo.AsApiErrorResponse(err)
+	require.True(t, ok, "error should be an *ApiErrorResponse")
+	require.NotNil(t, apiErr.ErrorDetail)
+	assert.Equal(t, blnkgo.ErrorCodeTxnDuplicateReference, apiErr.ErrorDetail.Code)
 }

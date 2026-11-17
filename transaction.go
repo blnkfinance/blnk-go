@@ -611,10 +611,15 @@ func (s *TransactionService) GetByReference(reference string) (*Transaction, *ht
 	return transaction, resp, nil
 }
 
-// List returns transactions via GET /transactions.
-// Pass ListOptions to page through results; without it Core returns its
-// default page (limit=20, offset=0).
-func (s *TransactionService) List(opts ...*ListOptions) ([]Transaction, *http.Response, error) {
+// List returns transactions via GET /transactions, using Core's default page
+// (limit=20, offset=0). Use ListWithOptions to page through results.
+func (s *TransactionService) List() ([]Transaction, *http.Response, error) {
+	return s.ListWithOptions(nil)
+}
+
+// ListWithOptions returns transactions via GET /transactions with optional
+// pagination. A nil opts, or zero Limit and Offset, uses Core's default page.
+func (s *TransactionService) ListWithOptions(opts *ListOptions) ([]Transaction, *http.Response, error) {
 	q, err := listQuery(opts)
 	if err != nil {
 		return nil, nil, err

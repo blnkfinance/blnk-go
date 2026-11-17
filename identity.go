@@ -123,9 +123,15 @@ func (s *IdentityService) Get(identityId string) (*IdentityResponse, *http.Respo
 	return identityResponse, resp, nil
 }
 
-// List returns identities via GET /identities. Pass ListOptions to page
-// through results; without it Core returns its default page (limit=20, offset=0).
-func (s *IdentityService) List(opts ...*ListOptions) ([]*IdentityResponse, *http.Response, error) {
+// List returns identities via GET /identities, using Core's default page
+// (limit=20, offset=0). Use ListWithOptions to page through results.
+func (s *IdentityService) List() ([]*IdentityResponse, *http.Response, error) {
+	return s.ListWithOptions(nil)
+}
+
+// ListWithOptions returns identities via GET /identities with optional
+// pagination. A nil opts, or zero Limit and Offset, uses Core's default page.
+func (s *IdentityService) ListWithOptions(opts *ListOptions) ([]*IdentityResponse, *http.Response, error) {
 	var identityResponse []*IdentityResponse
 	q, err := listQuery(opts)
 	if err != nil {

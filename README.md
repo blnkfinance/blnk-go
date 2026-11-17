@@ -249,10 +249,10 @@ fmt.Printf("Ledgers: %+v\n", ledgers)
 fmt.Printf("Status Code: %d\n", resp.StatusCode)
 ```
 
-Pass `ListOptions` to page through results. `Ledger.List`, `LedgerBalance.List`, `Transaction.List` and `Identity.List` all accept it:
+To page through results, use `ListWithOptions`. `Ledger`, `LedgerBalance`, `Transaction` and `Identity` all have it:
 
 ```go
-page2, resp, err := client.Ledger.List(&blnkgo.ListOptions{Limit: 50, Offset: 50})
+page2, resp, err := client.Ledger.ListWithOptions(&blnkgo.ListOptions{Limit: 50, Offset: 50})
 ```
 
 For structured queries, use `Ledger.Filter` instead.
