@@ -21,7 +21,7 @@ type LedgerBalance struct {
 	InflightDebitBalance  *big.Int `json:"inflight_debit_balance"`
 	QueuedDebitBalance    *big.Int `json:"queued_debit_balance,omitempty"`
 	QueuedCreditBalance   *big.Int `json:"queued_credit_balance,omitempty"`
-	// CurrencyMultiplier is omitted from Core 0.15.0+ balance responses (zero when absent).
+	// Deprecated: Core 0.15.0 removed currency_multiplier; it is always zero.
 	// Kept as float64 for source compatibility with existing callers.
 	CurrencyMultiplier float64            `json:"currency_multiplier,omitempty"`
 	Precision          int                `json:"precision"`
@@ -34,6 +34,9 @@ type LedgerBalance struct {
 	MetaData           MetaData           `json:"meta_data,omitempty"`
 	TrackFundLineage   bool               `json:"track_fund_lineage,omitempty"`
 	AllocationStrategy AllocationStrategy `json:"allocation_strategy,omitempty"`
+	// Identity and Ledger are set only when requested with GetBalanceRequest.Include.
+	Identity *IdentityResponse `json:"identity,omitempty"`
+	Ledger   *Ledger           `json:"ledger,omitempty"`
 }
 
 // GeneralLedgerID is the ledger_id required when creating an internal
@@ -52,10 +55,21 @@ type CreateLedgerBalanceRequest struct {
 	MetaData           MetaData           `json:"meta_data,omitempty"`
 }
 
+// BalanceInclude names a related record that GET /balances/{id} can embed.
+type BalanceInclude string
+
+const (
+	BalanceIncludeIdentity BalanceInclude = "identity"
+	BalanceIncludeLedger   BalanceInclude = "ledger"
+)
+
 // GetBalanceRequest holds optional query parameters for LedgerBalance.Get.
 type GetBalanceRequest struct {
 	// FromSource reconstructs the balance from transactions instead of snapshots.
 	FromSource bool `json:"from_source,omitempty"`
+	// Include embeds related records in the response, filling
+	// LedgerBalance.Identity and LedgerBalance.Ledger.
+	Include []BalanceInclude `json:"include,omitempty"`
 	// WithQueued includes queued debit/credit balances in the response.
 	WithQueued bool `json:"with_queued,omitempty"`
 }
@@ -80,10 +94,20 @@ func (s *LedgerBalanceService) Create(body CreateLedgerBalanceRequest) (*LedgerB
 	return ledgerBalance, resp, nil
 }
 
-// List returns balances via GET /balances.
-// Core applies default pagination (limit=10, offset=0) when query params are omitted.
+// List returns balances via GET /balances, using Core's default page
+// (limit=10, offset=0). Use ListWithOptions to page through results.
 func (s *LedgerBalanceService) List() ([]LedgerBalance, *http.Response, error) {
-	req, err := s.client.NewRequest("balances", http.MethodGet, nil)
+	return s.ListWithOptions(nil)
+}
+
+// ListWithOptions returns balances via GET /balances with optional
+// pagination. A nil opts, or zero Limit and Offset, uses Core's default page.
+func (s *LedgerBalanceService) ListWithOptions(opts *ListOptions) ([]LedgerBalance, *http.Response, error) {
+	q, err := listQuery(opts)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest("balances", http.MethodGet, q)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -115,6 +139,14 @@ func (s *LedgerBalanceService) Get(balanceID string, opts ...*GetBalanceRequest)
 		}
 		if opts[0].WithQueued {
 			params = append(params, "with_queued=true")
+		}
+		for _, inc := range opts[0].Include {
+			switch inc {
+			case BalanceIncludeIdentity, BalanceIncludeLedger:
+				params = append(params, "include="+string(inc))
+			default:
+				return nil, nil, fmt.Errorf("invalid include %q: use %q or %q", inc, BalanceIncludeIdentity, BalanceIncludeLedger)
+			}
 		}
 		if len(params) > 0 {
 			u += "?" + strings.Join(params, "&")

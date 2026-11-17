@@ -36,6 +36,7 @@ go test -tags=integration -v ./integration/... -run Issue124
 go test -tags=integration -v ./integration/... -run Issue125
 go test -tags=integration -v ./integration/... -run Issue126
 go test -tags=integration -v ./integration/... -run Issue141
+go test -tags=integration -v ./integration/... -run Core0159  # needs Core 0.15.9+; CI runs these (.github/workflows/integration-core.yml)
 
 # all integration tests
 go test -tags=integration -v ./integration/... 

@@ -20,3 +20,14 @@ func ValidateBalanceID(balanceID string) error {
 	}
 	return nil
 }
+
+// ValidateMonitorTrigger accepts an empty trigger (Core's default) or one of
+// MonitorTriggerEdge and MonitorTriggerLevel.
+func ValidateMonitorTrigger(trigger MonitorTrigger) error {
+	switch trigger {
+	case "", MonitorTriggerEdge, MonitorTriggerLevel:
+		return nil
+	default:
+		return fmt.Errorf("trigger must be %q or %q", MonitorTriggerEdge, MonitorTriggerLevel)
+	}
+}

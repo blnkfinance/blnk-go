@@ -14,8 +14,10 @@ type UpdateMetaDataRequest struct {
 	MetaData MetaData `json:"meta_data"`
 }
 
+// Metadata is the response of POST /{entity-id}/metadata. Core returns the
+// merged metadata under "meta_data".
 type Metadata struct {
-	MetaData MetaData `json:"metadata"`
+	MetaData MetaData `json:"meta_data"`
 }
 
 func (s *MetadataService) UpdateMetadata(entityID string, body UpdateMetaDataRequest) (*Metadata, *http.Response, error) {

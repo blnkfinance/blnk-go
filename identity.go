@@ -123,6 +123,9 @@ func (s *IdentityService) Get(identityId string) (*IdentityResponse, *http.Respo
 	return identityResponse, resp, nil
 }
 
+// List returns identities via GET /identities. Core 0.15.9 returns every
+// identity and ignores limit and offset on this route; use Filter with
+// FilterParams.Limit and Offset to page through identities.
 func (s *IdentityService) List() ([]*IdentityResponse, *http.Response, error) {
 	var identityResponse []*IdentityResponse
 	req, err := s.client.NewRequest("identities", http.MethodGet, nil)

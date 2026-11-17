@@ -22,13 +22,25 @@ const (
 	OpIsNotNull          Operator = "isnotnull"
 )
 
+// LogicalOperator joins the filters in a FilterParams.
+type LogicalOperator string
+
+const (
+	// LogicalAnd matches records that satisfy every filter (Core's default).
+	LogicalAnd LogicalOperator = "and"
+	// LogicalOr matches records that satisfy any filter.
+	LogicalOr LogicalOperator = "or"
+)
+
 type FilterParams struct {
-	Filters      []Filter `json:"filters"`
-	Limit        int      `json:"limit,omitempty"`
-	Offset       int      `json:"offset,omitempty"`
-	SortBy       string   `json:"sort_by,omitempty"`
-	SortOrder    string   `json:"sort_order,omitempty"`
-	IncludeCount bool     `json:"include_count,omitempty"`
+	Filters []Filter `json:"filters"`
+	// LogicalOperator is LogicalAnd or LogicalOr. Empty uses Core's default (and).
+	LogicalOperator LogicalOperator `json:"logical_operator,omitempty"`
+	Limit           int             `json:"limit,omitempty"`
+	Offset          int             `json:"offset,omitempty"`
+	SortBy          string          `json:"sort_by,omitempty"`
+	SortOrder       string          `json:"sort_order,omitempty"`
+	IncludeCount    bool            `json:"include_count,omitempty"`
 }
 
 type Filter struct {

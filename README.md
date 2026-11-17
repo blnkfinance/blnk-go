@@ -249,6 +249,12 @@ fmt.Printf("Ledgers: %+v\n", ledgers)
 fmt.Printf("Status Code: %d\n", resp.StatusCode)
 ```
 
+To page through results, use `ListWithOptions`. `Ledger`, `LedgerBalance` and `Transaction` have it. Core 0.15.9 ignores `limit` and `offset` on `GET /identities`, so page identities with `Identity.Filter` instead:
+
+```go
+page2, resp, err := client.Ledger.ListWithOptions(&blnkgo.ListOptions{Limit: 50, Offset: 50})
+```
+
 For structured queries, use `Ledger.Filter` instead.
 
 ---
@@ -731,10 +737,13 @@ monitorBody := blnkgo.MonitorData{
     Condition: blnkgo.MonitorCondition{
         Field:     "balance",
         Operator:  blnkgo.MonitorConditionOperatorLessThan,
-        Value:     10000, // $100.00 with precision 100
+        Value:     100, // $100.00; Core stores 100 × Precision = 10000 minor units
         Precision: 100,
     },
     CallBackURL: "https://your-app.com/webhook/balance-alert",
+    // Edge (Core's default) alerts once each time the condition becomes true.
+    // Level alerts on every balance update while it holds (Core 0.15.7+).
+    Trigger: blnkgo.MonitorTriggerEdge,
 }
 
 monitor, resp, err := client.BalanceMonitor.Create(monitorBody)
@@ -757,6 +766,23 @@ if err != nil {
 
 fmt.Printf("Monitors: %+v\n", monitors)
 fmt.Printf("Status Code: %d\n", resp.StatusCode)
+```
+
+For a fractional threshold such as $100.50, set `DecimalValue: &v` (with `v := 100.50`) instead of `Value`. Read a monitor's threshold with `monitor.Condition.Threshold()`, which works for both.
+
+Update only the fields you set with `UpdatePartial`. Core 0.15.9 keeps every field the request leaves out:
+
+```go
+newDescription := "Alert when balance falls below $50"
+newValue := 50.0 // $50.00 in major units
+updated, resp, err := client.BalanceMonitor.UpdatePartial(monitor.MonitorID, blnkgo.UpdateMonitorRequest{
+    Description: &newDescription,
+    Condition:   &blnkgo.UpdateMonitorCondition{Value: &newValue},
+})
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(updated.Message) // BalanceMonitor updated successfully
 ```
 
 Delete a balance monitor (Core 0.15.0+):
