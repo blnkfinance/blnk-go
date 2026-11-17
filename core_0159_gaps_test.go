@@ -3,6 +3,7 @@ package blnkgo_test
 import (
 	"encoding/json"
 	"io"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -324,4 +325,60 @@ func TestGetBalanceFromSourceStillSent(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "/balances/bln_1?from_source=true&with_queued=true&include=ledger", last().URI)
+}
+
+func TestMonitorConditionJSON(t *testing.T) {
+	t.Run("whole Value keeps the v1.6.0 wire format", func(t *testing.T) {
+		b, err := json.Marshal(blnkgo.MonitorCondition{Field: "balance", Operator: blnkgo.OperatorGreaterThan, Value: 100, Precision: 100})
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"field":"balance","operator":">","value":100,"precision":100}`, string(b))
+
+		b, err = json.Marshal(blnkgo.MonitorCondition{})
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"field":"","operator":"","value":0,"precision":0}`, string(b), "the legacy Update shape is unchanged")
+	})
+
+	t.Run("DecimalValue is sent in place of Value", func(t *testing.T) {
+		v := 100.5
+		b, err := json.Marshal(blnkgo.MonitorCondition{Field: "balance", Operator: blnkgo.OperatorLessThan, Value: 7, DecimalValue: &v, Precision: 100})
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"field":"balance","operator":"<","value":100.5,"precision":100}`, string(b))
+	})
+
+	t.Run("non-finite DecimalValue is rejected", func(t *testing.T) {
+		nan := math.NaN()
+		_, err := json.Marshal(blnkgo.MonitorCondition{DecimalValue: &nan})
+		assert.Error(t, err)
+	})
+
+	t.Run("fractional threshold decodes", func(t *testing.T) {
+		var c blnkgo.MonitorCondition
+		require.NoError(t, json.Unmarshal([]byte(`{"field":"balance","operator":">","value":100.5,"precision":100,"precise_value":10050}`), &c))
+		require.NotNil(t, c.DecimalValue)
+		assert.Equal(t, 100.5, *c.DecimalValue)
+		assert.EqualValues(t, 100, c.Value)
+		assert.Equal(t, 100.5, c.Threshold())
+		assert.Equal(t, "10050", c.PreciseValue.String())
+	})
+
+	t.Run("whole threshold decodes into Value only", func(t *testing.T) {
+		var c blnkgo.MonitorCondition
+		require.NoError(t, json.Unmarshal([]byte(`{"field":"balance","operator":">","value":250,"precision":100}`), &c))
+		assert.EqualValues(t, 250, c.Value)
+		assert.Nil(t, c.DecimalValue)
+		assert.Equal(t, 250.0, c.Threshold())
+
+		require.NoError(t, json.Unmarshal([]byte(`{"field":"balance","operator":">","value":250.0,"precision":100}`), &c))
+		assert.EqualValues(t, 250, c.Value)
+		assert.Nil(t, c.DecimalValue)
+	})
+}
+
+func TestBalanceMonitorGetReadsFractionalThreshold(t *testing.T) {
+	client, _ := replyServer(t, `{"monitor_id":"mon_1","balance_id":"bln_1","trigger":"edge","condition_state":false,
+		"condition":{"value":100.5,"precision":100,"precise_value":10050,"field":"balance","operator":">"}}`)
+
+	m, _, err := client.BalanceMonitor.Get("mon_1")
+	require.NoError(t, err, "v1.6.0 failed here with: cannot unmarshal number 100.5 into int64")
+	assert.Equal(t, 100.5, m.Condition.Threshold())
 }

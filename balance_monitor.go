@@ -1,8 +1,12 @@
 package blnkgo
 
 import (
+	"encoding/json"
+	"fmt"
+	"math"
 	"math/big"
 	"net/http"
+	"strconv"
 )
 
 type BalanceMonitorService service
@@ -18,14 +22,94 @@ const (
 	MonitorTriggerLevel MonitorTrigger = "level"
 )
 
+// MonitorCondition is a balance monitor's rule. The threshold is in major
+// units (Core stores Value × Precision as PreciseValue).
+//
+// Value holds a whole-number threshold. For a fractional one such as 100.50,
+// set DecimalValue instead; when DecimalValue is set it is sent in place of
+// Value. On reads, a fractional threshold fills DecimalValue and leaves the
+// whole part in Value. Use Threshold to read either.
 type MonitorCondition struct {
 	Field     string                    `json:"field"`
 	Operator  MonitorConditionOperators `json:"operator"`
 	Value     int64                     `json:"value"`
 	Precision int64                     `json:"precision"`
+	// DecimalValue is a fractional threshold in major units (Core 0.15.x
+	// accepts values such as 100.50). It takes precedence over Value.
+	DecimalValue *float64 `json:"-"`
 	// PreciseValue is the threshold in minor units (Value × Precision). Core
 	// computes it and returns it on reads; it is ignored on requests.
 	PreciseValue *big.Int `json:"precise_value,omitempty"`
+}
+
+// Threshold returns the threshold in major units: DecimalValue when set,
+// otherwise Value.
+func (c MonitorCondition) Threshold() float64 {
+	if c.DecimalValue != nil {
+		return *c.DecimalValue
+	}
+	return float64(c.Value)
+}
+
+type monitorConditionWire struct {
+	Field        string                    `json:"field"`
+	Operator     MonitorConditionOperators `json:"operator"`
+	Value        json.Number               `json:"value"`
+	Precision    int64                     `json:"precision"`
+	PreciseValue *big.Int                  `json:"precise_value,omitempty"`
+}
+
+// MarshalJSON sends DecimalValue when set, otherwise Value. The keys sent are
+// the same as before DecimalValue existed.
+func (c MonitorCondition) MarshalJSON() ([]byte, error) {
+	value := strconv.FormatInt(c.Value, 10)
+	if c.DecimalValue != nil {
+		d := *c.DecimalValue
+		if math.IsNaN(d) || math.IsInf(d, 0) {
+			return nil, fmt.Errorf("monitor condition value must be a finite number")
+		}
+		value = strconv.FormatFloat(d, 'f', -1, 64)
+	}
+	return json.Marshal(monitorConditionWire{
+		Field:        c.Field,
+		Operator:     c.Operator,
+		Value:        json.Number(value),
+		Precision:    c.Precision,
+		PreciseValue: c.PreciseValue,
+	})
+}
+
+// UnmarshalJSON accepts whole and fractional thresholds. A whole number fills
+// Value only; a fractional one fills DecimalValue and the whole part of Value.
+func (c *MonitorCondition) UnmarshalJSON(data []byte) error {
+	var w monitorConditionWire
+	if err := json.Unmarshal(data, &w); err != nil {
+		return err
+	}
+	*c = MonitorCondition{
+		Field:        w.Field,
+		Operator:     w.Operator,
+		Precision:    w.Precision,
+		PreciseValue: w.PreciseValue,
+	}
+	if w.Value == "" {
+		return nil
+	}
+	if n, err := w.Value.Int64(); err == nil {
+		c.Value = n
+		return nil
+	}
+	f, err := w.Value.Float64()
+	if err != nil {
+		return fmt.Errorf("monitor condition value %q: %w", w.Value, err)
+	}
+	if f == math.Trunc(f) && math.Abs(f) < 1<<63 {
+		c.Value = int64(f)
+		return nil
+	}
+	c.Value = int64(math.Trunc(f))
+	c.DecimalValue = &f
+	return nil
 }
 
 // MonitorData represents the data structure for monitoring information.

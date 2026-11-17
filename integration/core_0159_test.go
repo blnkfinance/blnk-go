@@ -336,3 +336,39 @@ func TestCore0159_UpdateMetadataReturnsMergedMetadata(t *testing.T) {
 	assert.Equal(t, "gold", out.MetaData["tier"])
 	assert.Equal(t, "yes", out.MetaData["keep"], "Core merges onto existing metadata")
 }
+
+// Core 0.15.9 accepts fractional thresholds. The SDK can create one with
+// DecimalValue, read it back, and read one set through UpdatePartial.
+func TestCore0159_MonitorFractionalThreshold(t *testing.T) {
+	client := newIntegrationClient(t)
+	bal, _, err := client.LedgerBalance.Create(blnkgo.CreateLedgerBalanceRequest{
+		LedgerID: blnkgo.GeneralLedgerID, Currency: "USD", Indicator: "@SdkGoFrac" + uniqueSuffix(),
+	})
+	require.NoError(t, err)
+
+	v := 100.5
+	mon, _, err := client.BalanceMonitor.Create(blnkgo.MonitorData{
+		BalanceID: bal.BalanceID,
+		Condition: blnkgo.MonitorCondition{Field: "balance", Operator: blnkgo.OperatorLessThan, DecimalValue: &v, Precision: 100},
+	})
+	require.NoError(t, err)
+
+	got := getMonitor(t, client, mon.MonitorID)
+	assert.Equal(t, 100.5, got.Condition.Threshold())
+	require.NotNil(t, got.Condition.PreciseValue)
+	assert.Equal(t, "10050", got.Condition.PreciseValue.String())
+
+	nv := 99.99
+	_, _, err = client.BalanceMonitor.UpdatePartial(mon.MonitorID, blnkgo.UpdateMonitorRequest{
+		Condition: &blnkgo.UpdateMonitorCondition{Value: &nv},
+	})
+	require.NoError(t, err)
+	got = getMonitor(t, client, mon.MonitorID)
+	assert.Equal(t, 99.99, got.Condition.Threshold())
+	assert.Equal(t, "9999", got.Condition.PreciseValue.String())
+
+	list, _, err := client.BalanceMonitor.ListByBalanceID(bal.BalanceID)
+	require.NoError(t, err, "listing a balance with a fractional monitor decodes")
+	require.Len(t, list, 1)
+	assert.Equal(t, 99.99, list[0].Condition.Threshold())
+}

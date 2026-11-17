@@ -768,6 +768,8 @@ fmt.Printf("Monitors: %+v\n", monitors)
 fmt.Printf("Status Code: %d\n", resp.StatusCode)
 ```
 
+For a fractional threshold such as $100.50, set `DecimalValue: &v` (with `v := 100.50`) instead of `Value`. Read a monitor's threshold with `monitor.Condition.Threshold()`, which works for both.
+
 Update only the fields you set with `UpdatePartial`. Core 0.15.9 keeps every field the request leaves out:
 
 ```go
