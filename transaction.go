@@ -14,7 +14,8 @@ type Source struct {
 	Identifier          string       `json:"identifier"`
 	Distribution        Distribution `json:"distribution,omitempty"`
 	PreciseDistribution string       `json:"precise_distribution,omitempty"`
-	Narration           string       `json:"narration,omitempty"`
+	// Deprecated: Core has no narration field on a distribution and ignores it.
+	Narration string `json:"narration,omitempty"`
 }
 
 type ParentTransaction struct {
@@ -25,8 +26,8 @@ type ParentTransaction struct {
 	Currency     string   `json:"currency"`
 	Sources      []Source `json:"sources,omitempty"`
 	Destinations []Source `json:"destinations,omitempty"`
-	// Rate may be set on create for multi-currency transfers (e.g. Rate: 1.1).
-	// Core 0.15.0+ omits rate from transaction responses (zero when absent).
+	// Deprecated: Core 0.15.0 removed the rate column. Core ignores it on
+	// create and never returns it.
 	Rate          float64              `json:"rate,omitempty"`
 	Source        string               `json:"source,omitempty"`
 	Destination   string               `json:"destination,omitempty"`
@@ -45,6 +46,9 @@ type CreateTransactionRequest struct {
 	InflightCommitDate *time.Time `json:"inflight_commit_date,omitempty"`
 	ScheduledFor       *time.Time `json:"scheduled_for,omitempty"`
 	AllowOverdraft     bool       `json:"allow_overdraft,omitempty"`
+	// OverdraftLimit caps how far below zero the source may go when
+	// AllowOverdraft is true, in major units (e.g. 500.00). Zero means no cap.
+	OverdraftLimit float64 `json:"overdraft_limit,omitempty"`
 	// DryRun previews the post without writing (Core 0.15.3+). Use CreateDryRun
 	// so the response is typed as TransactionPreview.
 	DryRun bool `json:"dry_run,omitempty"`
@@ -55,7 +59,18 @@ type Transaction struct {
 	CreatedAt           time.Time `json:"created_at"`
 	TransactionID       string    `json:"transaction_id"`
 	ParentTransactionID string    `json:"parent_transaction,omitempty"`
-	Queued              bool      `json:"queued,omitempty"`
+	// Queued is true when Core accepted the request onto the queue and has
+	// not applied it yet.
+	Queued bool `json:"queued,omitempty"`
+	// Hash is the transaction's hash-chain digest (Core 0.15.0+).
+	Hash               string     `json:"hash,omitempty"`
+	AmountString       string     `json:"amount_string,omitempty"`
+	Inflight           bool       `json:"inflight,omitempty"`
+	AllowOverdraft     bool       `json:"allow_overdraft,omitempty"`
+	OverdraftLimit     float64    `json:"overdraft_limit,omitempty"`
+	ScheduledFor       *time.Time `json:"scheduled_for,omitempty"`
+	InflightExpiryDate *time.Time `json:"inflight_expiry_date,omitempty"`
+	InflightCommitDate *time.Time `json:"inflight_commit_date,omitempty"`
 }
 
 type UpdateStatus struct {
@@ -63,6 +78,11 @@ type UpdateStatus struct {
 	Amount        float64        `json:"amount"`
 	PreciseAmount *big.Int       `json:"precise_amount"`
 	SkipQueue     bool           `json:"skip_queue,omitempty"`
+	// Reference is an optional idempotency key for this commit or void (Core
+	// 0.15.7+). Repeating the same reference, action and amount returns the
+	// original child; a different amount or action returns 409
+	// TXN_DUPLICATE_REFERENCE.
+	Reference string `json:"reference,omitempty"`
 	// DryRun previews commit/void without settling the hold (Core 0.15.3+).
 	// Use UpdateDryRun so the response is typed as TransactionPreview.
 	DryRun bool `json:"dry_run,omitempty"`
@@ -592,9 +612,14 @@ func (s *TransactionService) GetByReference(reference string) (*Transaction, *ht
 }
 
 // List returns transactions via GET /transactions.
-// Core applies default pagination (limit=20, offset=0) when query params are omitted.
-func (s *TransactionService) List() ([]Transaction, *http.Response, error) {
-	req, err := s.client.NewRequest("transactions", http.MethodGet, nil)
+// Pass ListOptions to page through results; without it Core returns its
+// default page (limit=20, offset=0).
+func (s *TransactionService) List(opts ...*ListOptions) ([]Transaction, *http.Response, error) {
+	q, err := listQuery(opts)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest("transactions", http.MethodGet, q)
 	if err != nil {
 		return nil, nil, err
 	}

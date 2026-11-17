@@ -24,8 +24,14 @@ type UpdateLedgerRequest struct {
 	Name string `json:"name"`
 }
 
-func (s *LedgerService) List() ([]Ledger, *http.Response, error) {
-	req, err := s.client.NewRequest("ledgers", http.MethodGet, nil)
+// List returns ledgers via GET /ledgers. Pass ListOptions to page through
+// results; without it Core returns its default page (limit=10, offset=0).
+func (s *LedgerService) List(opts ...*ListOptions) ([]Ledger, *http.Response, error) {
+	q, err := listQuery(opts)
+	if err != nil {
+		return nil, nil, err
+	}
+	req, err := s.client.NewRequest("ledgers", http.MethodGet, q)
 	if err != nil {
 		return nil, nil, err
 	}

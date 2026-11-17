@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Blnk Core 0.15.9 alignment
+
+- **Fix: `Metadata.UpdateMetadata` returned empty metadata.** The response is now read from `meta_data`, the key Core sends.
+- **Pagination.** `Ledger.List`, `LedgerBalance.List`, `Transaction.List` and `Identity.List` accept an optional `*ListOptions{Limit, Offset}`. Calls with no arguments are unchanged.
+- **Balance monitor trigger (Core 0.15.7+).** `MonitorData.Trigger` takes `MonitorTriggerEdge` (Core's default) or `MonitorTriggerLevel`. Responses include `ConditionState` and `Condition.PreciseValue`.
+- **`BalanceMonitor.UpdatePartial` (Core 0.15.9+).** It sends only the fields set on `UpdateMonitorRequest`, so a threshold can be moved to 0 and a description cleared on purpose. It returns Core's message and `PrecisionUnchanged`. `BalanceMonitor.Update` is deprecated: Core never returned the monitor from it, so its result was always empty.
+- **Idempotent commit and void (Core 0.15.7+).** `UpdateStatus.Reference` makes a commit or void idempotent by reference.
+- **`CreateTransactionRequest.OverdraftLimit`** caps an overdraft when `AllowOverdraft` is true.
+- **More transaction response fields.** `Transaction` now decodes `Hash`, `AmountString`, `Inflight`, `AllowOverdraft`, `OverdraftLimit`, `ScheduledFor`, `InflightExpiryDate` and `InflightCommitDate`.
+- **`GetBalanceRequest.Include`** embeds the identity and ledger (`BalanceIncludeIdentity`, `BalanceIncludeLedger`) in `LedgerBalance.Identity` and `LedgerBalance.Ledger`.
+- **`FilterParams.LogicalOperator`** joins filters with `LogicalAnd` or `LogicalOr`.
+- **Deprecated, still present:** `ParentTransaction.Rate`, `Source.Narration` and `LedgerBalance.CurrencyMultiplier`, which Core no longer has, and `GetBalanceRequest.FromSource`, which `GET /balances/{id}` ignores (use `GetHistorical`).
+
 ### Security: resource IDs in request paths
 
 Methods that put a caller-supplied value into the URL path now validate and escape it. Before, an app that passed a user-controlled ID into the SDK could have its `X-Blnk-Key` sent to a different Core route, for example `Transaction.Refund("../search/reindex")` sent `POST /search/reindex`. On a Cloud Proxy base, `%2e%2e` got past the `/proxy/` check.
