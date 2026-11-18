@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## v1.7.0 — Blnk Core 0.15.9
 
 ### Blnk Core 0.15.9 alignment
 
