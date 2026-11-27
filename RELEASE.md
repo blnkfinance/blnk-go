@@ -1,5 +1,11 @@
 # Release Notes
 
+## v1.7.1
+
+v1.7.1 adds the Apache 2.0 license. The SDK code is unchanged from v1.7.0, and it still targets **Blnk Core 0.15.9**.
+
+- Ship the Apache 2.0 `LICENSE` file, added on main in #153. Earlier releases shipped without one.
+
 ## v1.7.0 — Blnk Core 0.15.9
 
 ### Blnk Core 0.15.9 alignment
