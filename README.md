@@ -57,10 +57,10 @@ git clone https://github.com/blnkfinance/blnk && cd blnk
 Install the Blnk Go SDK in your project:
 
 ```bash
-go get github.com/blnkfinance/blnk-go@v1.7.0
+go get github.com/blnkfinance/blnk-go@v1.7.1
 ```
 
-`v1.7.0` targets **Blnk Core 0.15.9** and includes Cloud Proxy support. See [RELEASE.md](RELEASE.md) for monitor updates, inflight idempotency, overdraft limits, expanded balances, pagination, and Core compatibility details.
+`v1.7.1` targets **Blnk Core 0.15.9**, is licensed under Apache 2.0, and includes Cloud Proxy support. See [RELEASE.md](RELEASE.md) for monitor updates, inflight idempotency, overdraft limits, expanded balances, pagination, and Core compatibility details.
 
 ### Step 3: Setting Up Configuration
 
